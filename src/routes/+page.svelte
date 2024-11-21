@@ -3,10 +3,10 @@
   
     const graphData = {
       nodes: [
-        { id: "A", group: 1 },
-        { id: "B", group: 1 },
-        { id: "C", group: 2 },
-        { id: "D", group: 2 }
+        { id: "A", color: 1 },
+        { id: "B", color: 1 },
+        { id: "C", color: 2 },
+        { id: "D", color: 2 }
       ],
       links: [
         { source: "A", target: "B", value: 1 },

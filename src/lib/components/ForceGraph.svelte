@@ -5,7 +5,7 @@
     // Define types for our data
     interface Node {
       id: string;
-      group: number;
+      color: number;
       x?: number;
       y?: number;
       fx?: number | null;
@@ -67,7 +67,7 @@
         .data(nodes)
         .join("circle")
         .attr("r", 5)
-        .attr("fill", d => color(d.group));
+        .attr("fill", d => color(d.color));
   
       // Add titles
       node.append("title")
