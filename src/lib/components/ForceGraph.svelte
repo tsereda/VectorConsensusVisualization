@@ -13,8 +13,8 @@
     }
   
     interface Link {
-      source: string;
-      target: string;
+      source: string | Node;  // Allow both string and Node
+      target: string | Node;
       value: number;
     }
   
@@ -45,7 +45,7 @@
   
       // Create the simulation
       simulation = d3.forceSimulation<Node>(nodes)
-        .force("link", d3.forceLink<Node, d3.SimulationLinkDatum<Node>>(links).id(d => d.id))
+        .force("link", d3.forceLink<Node, d3.SimulationLinkDatum<Node>>(links).id((d: Node) => d.id))
         .force("charge", d3.forceManyBody())
         .force("x", d3.forceX())
         .force("y", d3.forceY());
@@ -57,7 +57,7 @@
         .selectAll<SVGLineElement, d3.SimulationLinkDatum<Node>>("line")
         .data(links)
         .join("line")
-        .attr("stroke-width", d => Math.sqrt((d as Link).value));
+        .attr("stroke-width", (d: Link) => Math.sqrt((d as Link).value));
   
       // Add nodes
       const node = svg.append("g")
@@ -67,11 +67,11 @@
         .data(nodes)
         .join("circle")
         .attr("r", 5)
-        .attr("fill", d => color(d.color));
+        .attr("fill", (d: Node) => color(d.color));
   
       // Add titles
       node.append("title")
-        .text(d => d.id);
+        .text((d: Node) => d.id);
   
       // Drag behavior functions
       function dragstarted(event: d3.D3DragEvent<SVGCircleElement, Node, Node>) {
@@ -100,10 +100,10 @@
       // Update positions on simulation tick
       simulation.on("tick", () => {
         link
-          .attr("x1", d => (d.source as Node).x ?? 0)
-          .attr("y1", d => (d.source as Node).y ?? 0)
-          .attr("x2", d => (d.target as Node).x ?? 0)
-          .attr("y2", d => (d.target as Node).y ?? 0);
+          .attr("x1", (d: Link) => (d.source as Node).x ?? 0)
+          .attr("y1", (d: Link) => (d.source as Node).y ?? 0)
+          .attr("x2", (d: Link) => (d.target as Node).x ?? 0)
+          .attr("y2", (d: Link) => (d.target as Node).y ?? 0);
   
         node
           .attr("cx", d => d.x ?? 0)
