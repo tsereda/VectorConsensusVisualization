@@ -1,8 +1,8 @@
 <script lang="ts">
   import ForceGraph from '$lib/components/ForceGraph.svelte';
   
-  let nodeCount = 4;
-  let sparsity = 0.5; // Controls how many connections are made
+  let nodeCount = 300; // Start with more nodes
+  let sparsity = 0.01; // Controls how many connections are made
   
   function generateGraph(count: number, sparsityFactor: number) {
       const nodes = Array.from({ length: count }, (_, i) => ({
@@ -52,19 +52,19 @@
               id="nodeCount" 
               bind:value={nodeCount} 
               min="2" 
-              max="50" 
+              max="1000" 
               step="1"
           />
       </div>
       <div class="slider-container">
-          <label for="sparsity">Connection Density: {sparsity.toFixed(2)}</label>
+          <label for="sparsity">Connection Density: {sparsity.toFixed(3)}</label>
           <input 
               type="range" 
               id="sparsity" 
               bind:value={sparsity} 
-              min="0.1" 
-              max="1" 
-              step="0.1"
+              min="0.001" 
+              max=".1" 
+              step="0.001"
           />
       </div>
   </div>
