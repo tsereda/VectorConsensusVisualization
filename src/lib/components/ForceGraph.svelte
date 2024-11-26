@@ -10,6 +10,7 @@
       y?: number;
       fx?: number | null;
       fy?: number | null;
+      adjustedColor?: number;
     }
   
     interface Link {
@@ -35,15 +36,48 @@
         // Clear existing graph
         d3.select(svgElement).selectAll("*").remove();
 
-        // Create copies of data
-        const links = data.links.map(d => ({...d}));
-        const nodes = data.nodes.map(d => ({...d}));
-  
-        const color = d3.scaleOrdinal<number, string>(d3.schemeCategory10);
-  
+        // Create copies of data 
+        const links = data.links.map(d => ({ ...d }));
+        const nodes = data.nodes.map(d => ({ ...d }));
+
+        // Create a map of node id to node
+        const nodeById = new Map(nodes.map(node => [node.id, node]));
+
+        // Build neighbors map
+        const neighbors = new Map<string, Node[]>();
+        nodes.forEach(node => neighbors.set(node.id, []));
+
+        links.forEach(link => {
+            const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+            const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+
+            neighbors.get(sourceId)!.push(nodeById.get(targetId)!);
+            neighbors.get(targetId)!.push(nodeById.get(sourceId)!);
+        });
+
+        // Compute adjusted colors with neighbor influence
+        nodes.forEach(node => {
+            const neighborNodes = neighbors.get(node.id)!;
+            if (neighborNodes.length === 0) {
+                node.adjustedColor = node.color;
+                return;
+            }
+            
+            const neighborAvg = neighborNodes.reduce((sum, n) => sum + n.color, 0) / neighborNodes.length;
+            // Ensure we're actually mixing the colors (50-50)
+            node.adjustedColor = (node.color + neighborAvg) / 2;
+            
+            // Log to verify neighbor influence
+            console.log(`Node ${node.id}: original=${node.color}, neighbors avg=${neighborAvg}, adjusted=${node.adjustedColor}`);
+        });
+
+        // Use a wider color spectrum
+        const colorScale = d3.scaleSequential(d3.interpolateSpectral)
+            .domain([0, d3.max(nodes, d => d.adjustedColor) || 1]);
+
         const svg = d3.select(svgElement)
             .attr("viewBox", [-width / 2, -height / 2, width, height]);
-  
+
         if (simulation) simulation.stop();
         
         simulation = d3.forceSimulation<Node>(nodes)
@@ -66,8 +100,8 @@
             .selectAll<SVGCircleElement, Node>("circle")
             .data(nodes)
             .join("circle")
-            .attr("r", 5)
-            .attr("fill", (d: Node) => color(d.color));
+            .attr("r", 8) // Increased from 5
+            .attr("fill", (d: Node) => colorScale(d.adjustedColor || 0));
   
         node.append("title")
             .text((d: Node) => d.id);

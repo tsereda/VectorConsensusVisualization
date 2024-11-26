@@ -63,7 +63,7 @@
               id="sparsity" 
               bind:value={sparsity} 
               min="0.001" 
-              max=".1" 
+              max="1" 
               step="0.001"
           />
       </div>
