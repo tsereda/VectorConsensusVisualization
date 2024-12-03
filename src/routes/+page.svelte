@@ -3,6 +3,8 @@
   
   let nodeCount = 300; // Start with more nodes
   let sparsity = 0.01; // Controls how many connections are made
+  let numExchanges = 3;
+  let mixRatio = 0.3;
   
   function generateGraph(count: number, sparsityFactor: number) {
       const nodes = Array.from({ length: count }, (_, i) => ({
@@ -67,9 +69,35 @@
               step="0.001"
           />
       </div>
+      <div class="slider-container">
+          <label for="numExchanges">Color Exchanges per Frame: {numExchanges}</label>
+          <input 
+              type="range" 
+              id="numExchanges" 
+              bind:value={numExchanges} 
+              min="1" 
+              max="10" 
+              step="1"
+          />
+      </div>
+      <div class="slider-container">
+          <label for="mixRatio">Color Mix Speed: {mixRatio.toFixed(2)}</label>
+          <input 
+              type="range" 
+              id="mixRatio" 
+              bind:value={mixRatio} 
+              min="0.1" 
+              max="0.9" 
+              step="0.1"
+          />
+      </div>
   </div>
 
-  <ForceGraph data={graphData} />
+  <ForceGraph 
+      data={graphData} 
+      {numExchanges}
+      {mixRatio}
+  />
 </div>
 
 <style>

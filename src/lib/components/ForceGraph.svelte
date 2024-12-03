@@ -26,6 +26,8 @@
     }
   
     export let data: GraphData;
+    export let numExchanges = 3;  // Add this
+    export let mixRatio = 0.3;    // Add this
     let svgElement: SVGSVGElement;
     let simulation: d3.Simulation<Node, d3.SimulationLinkDatum<Node>>;
     let container: HTMLDivElement;
@@ -155,7 +157,11 @@
         function animate() {
             colors.update(currentColors => {
                 const newColors = new Map(currentColors);
-                data.nodes.forEach(node => {
+                // Increase the number of color exchanges per frame
+                
+                for (let i = 0; i < numExchanges; i++) {
+                    // Randomly select nodes for color exchange
+                    const node = data.nodes[Math.floor(Math.random() * data.nodes.length)];
                     const neighbors = data.links
                         .filter(link => 
                             (typeof link.source === 'string' ? link.source : link.source.id) === node.id ||
@@ -165,15 +171,23 @@
                             const otherId = (typeof link.source === 'string' ? link.source : link.source.id) === node.id
                                 ? (typeof link.target === 'string' ? link.target : link.target.id)
                                 : (typeof link.source === 'string' ? link.source : link.source.id);
-                            return currentColors.get(otherId) ?? 0;
+                            return otherId;
                         });
 
                     if (neighbors.length > 0) {
-                        const avgColor = neighbors.reduce((sum, c) => sum + c, 0) / neighbors.length;
-                        const currentColor = currentColors.get(node.id) ?? 0;
-                        newColors.set(node.id, currentColor * 0.95 + avgColor * 0.05);
+                        // Randomly select one neighbor
+                        const neighborId = neighbors[Math.floor(Math.random() * neighbors.length)];
+                        const nodeColor = currentColors.get(node.id) ?? node.color;
+                        const neighborColor = currentColors.get(neighborId) ?? 0;
+                        
+                        // Exchange colors with weighted averaging
+                        const newNodeColor = nodeColor * (1 - mixRatio) + neighborColor * mixRatio;
+                        const newNeighborColor = neighborColor * (1 - mixRatio) + nodeColor * mixRatio;
+                        
+                        newColors.set(node.id, newNodeColor);
+                        newColors.set(neighborId, newNeighborColor);
                     }
-                });
+                }
                 return newColors;
             });
 
