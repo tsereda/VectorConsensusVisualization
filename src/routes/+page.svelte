@@ -52,7 +52,7 @@
               id="nodeCount" 
               bind:value={nodeCount} 
               min="2" 
-              max="1000" 
+              max="900" 
               step="1"
           />
       </div>
@@ -63,7 +63,7 @@
               id="sparsity" 
               bind:value={sparsity} 
               min="0.001" 
-              max="1" 
+              max=".05" 
               step="0.001"
           />
       </div>
