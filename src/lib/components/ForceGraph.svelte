@@ -31,6 +31,10 @@
     let width = 928;
     let height = 680;
 
+    // Add a tick counter for color animation
+    let colorTick = 0;
+    let colorInterval: ReturnType<typeof setInterval>;
+
     function createGraph(data: GraphData) {
         // Clear existing graph
         d3.select(svgElement).selectAll("*").remove();
@@ -138,6 +142,25 @@
                 .attr("cx", d => d.x ?? 0)
                 .attr("cy", d => d.y ?? 0);
         });
+
+        // Start color animation if not already running
+        if (!colorInterval) {
+            colorInterval = setInterval(() => {
+                colorTick += 0.05;
+                updateColors();
+            }, 50);
+        }
+    }
+
+    function updateColors() {
+        const svg = d3.select(svgElement);
+        const node = svg.selectAll("circle");
+        
+        // Update colors based on time
+        node.attr("fill", (d: Node) => {
+            const phase = (d.color + colorTick) % 10;
+            return d3.interpolateSpectral(phase / 10);
+        });
     }
 
     onMount(() => {
@@ -167,7 +190,10 @@
   
     // Clean up simulation on component destroy
     onDestroy(() => {
-      if (simulation) simulation.stop();
+        if (colorInterval) {
+            clearInterval(colorInterval);
+        }
+        if (simulation) simulation.stop();
     });
   </script>
   
