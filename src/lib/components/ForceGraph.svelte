@@ -221,8 +221,9 @@
         if (svgElement && $colors) {
             d3.select(svgElement)
                 .selectAll("circle")
-                .attr("fill", function(d: any) {
-                    const color = $colors.get(d.id) ?? d.color;
+                .attr("fill", function(d) {
+                    const node = d as Node;
+                    const color = $colors.get(node.id) ?? node.color;
                     return d3.interpolateSpectral(color / 10);
                 });
         }
