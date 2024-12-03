@@ -27,10 +27,9 @@
     export let data: GraphData;
     let svgElement: SVGSVGElement;
     let simulation: d3.Simulation<Node, d3.SimulationLinkDatum<Node>>;
-  
-    // Chart dimensions
-    $: width = 928;
-    $: height = 680;
+    let container: HTMLDivElement;
+    let width = 928;
+    let height = 680;
 
     function createGraph(data: GraphData) {
         // Clear existing graph
@@ -143,6 +142,22 @@
 
     onMount(() => {
         createGraph(data);
+
+        const resizeObserver = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                width = entry.contentRect.width;
+                height = entry.contentRect.height;
+                if (svgElement) {
+                    createGraph(data);
+                }
+            }
+        });
+
+        if (container) {
+            resizeObserver.observe(container);
+        }
+
+        return () => resizeObserver.disconnect();
     });
 
     // React to data changes
@@ -156,9 +171,26 @@
     });
   </script>
   
-  <svg
-    bind:this={svgElement}
-    {width}
-    {height}
-    style="max-width: 100%; height: auto;"
-  />
+<div 
+    class="force-graph-container" 
+    bind:this={container}
+>
+    <svg
+        bind:this={svgElement}
+        {width}
+        {height}
+        style="width: 100%; height: 100%;"
+    />
+</div>
+
+<style>
+    .force-graph-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+    }
+
+    svg {
+        display: block;
+    }
+</style>

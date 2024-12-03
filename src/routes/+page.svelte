@@ -77,9 +77,13 @@
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      height: 100vh; /* Full viewport height */
+      padding: 1rem;
+      box-sizing: border-box;
   }
 
   .controls {
+      flex: 0 0 auto; /* Don't grow or shrink */
       padding: 1rem;
       background: #f5f5f5;
       border-radius: 4px;
@@ -96,5 +100,11 @@
 
   input[type="range"] {
       width: 100%;
+  }
+
+  /* Add this to make the ForceGraph fill remaining space */
+  :global(.force-graph-container) {
+      flex: 1;
+      min-height: 0; /* Important for Firefox */
   }
 </style>
