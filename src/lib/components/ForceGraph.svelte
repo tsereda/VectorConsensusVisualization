@@ -1,7 +1,8 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import * as d3 from 'd3';
-  
+    import { writable } from 'svelte/store';
+
     // Define types for our data
     interface Node {
       id: string;
@@ -31,9 +32,9 @@
     let width = 928;
     let height = 680;
 
-    // Add a tick counter for color animation
-    let colorTick = 0;
-    let colorInterval: ReturnType<typeof setInterval>;
+    // Make color state reactive
+    const colors = writable<Map<string, number>>(new Map());
+    let animationFrame: number;
 
     function createGraph(data: GraphData) {
         // Clear existing graph
@@ -143,24 +144,43 @@
                 .attr("cy", d => d.y ?? 0);
         });
 
-        // Start color animation if not already running
-        if (!colorInterval) {
-            colorInterval = setInterval(() => {
-                colorTick += 0.05;
-                updateColors();
-            }, 50);
-        }
-    }
-
-    function updateColors() {
-        const svg = d3.select(svgElement);
-        const node = svg.selectAll("circle");
-        
-        // Update colors based on time
-        node.attr("fill", (d: Node) => {
-            const phase = (d.color + colorTick) % 10;
-            return d3.interpolateSpectral(phase / 10);
+        // Initialize colors if not already set
+        const currentColors = new Map();
+        data.nodes.forEach(node => {
+            currentColors.set(node.id, node.color);
         });
+        colors.set(currentColors);
+
+        // Replace interval with requestAnimationFrame
+        function animate() {
+            colors.update(currentColors => {
+                const newColors = new Map(currentColors);
+                data.nodes.forEach(node => {
+                    const neighbors = data.links
+                        .filter(link => 
+                            (typeof link.source === 'string' ? link.source : link.source.id) === node.id ||
+                            (typeof link.target === 'string' ? link.target : link.target.id) === node.id
+                        )
+                        .map(link => {
+                            const otherId = (typeof link.source === 'string' ? link.source : link.source.id) === node.id
+                                ? (typeof link.target === 'string' ? link.target : link.target.id)
+                                : (typeof link.source === 'string' ? link.source : link.source.id);
+                            return currentColors.get(otherId) ?? 0;
+                        });
+
+                    if (neighbors.length > 0) {
+                        const avgColor = neighbors.reduce((sum, c) => sum + c, 0) / neighbors.length;
+                        const currentColor = currentColors.get(node.id) ?? 0;
+                        newColors.set(node.id, currentColor * 0.95 + avgColor * 0.05);
+                    }
+                });
+                return newColors;
+            });
+
+            animationFrame = requestAnimationFrame(animate);
+        }
+
+        animate();
     }
 
     onMount(() => {
@@ -190,11 +210,23 @@
   
     // Clean up simulation on component destroy
     onDestroy(() => {
-        if (colorInterval) {
-            clearInterval(colorInterval);
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
         }
         if (simulation) simulation.stop();
     });
+
+    // Update node colors when store changes
+    $: {
+        if (svgElement && $colors) {
+            d3.select(svgElement)
+                .selectAll("circle")
+                .attr("fill", function(d: any) {
+                    const color = $colors.get(d.id) ?? d.color;
+                    return d3.interpolateSpectral(color / 10);
+                });
+        }
+    }
   </script>
   
 <div 
