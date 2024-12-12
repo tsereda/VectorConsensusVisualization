@@ -37,6 +37,7 @@
     // Make color state reactive
     const colors = writable<Map<string, number>>(new Map());
     let animationFrame: number;
+    let neighbors: Map<string, Node[]>;
 
     function createGraph(data: GraphData) {
         // Clear existing graph
@@ -50,7 +51,7 @@
         const nodeById = new Map(nodes.map(node => [node.id, node]));
 
         // Build neighbors map
-        const neighbors = new Map<string, Node[]>();
+        neighbors = new Map<string, Node[]>();
         nodes.forEach(node => neighbors.set(node.id, []));
 
         links.forEach(link => {
@@ -154,40 +155,27 @@
         colors.set(currentColors);
 
         // Replace interval with requestAnimationFrame
+        let round = 0;
+
         function animate() {
             colors.update(currentColors => {
-                const newColors = new Map(currentColors);
-                // Increase the number of color exchanges per frame
-                
-                for (let i = 0; i < numExchanges; i++) {
-                    // Randomly select nodes for color exchange
-                    const node = data.nodes[Math.floor(Math.random() * data.nodes.length)];
-                    const neighbors = data.links
-                        .filter(link => 
-                            (typeof link.source === 'string' ? link.source : link.source.id) === node.id ||
-                            (typeof link.target === 'string' ? link.target : link.target.id) === node.id
-                        )
-                        .map(link => {
-                            const otherId = (typeof link.source === 'string' ? link.source : link.source.id) === node.id
-                                ? (typeof link.target === 'string' ? link.target : link.target.id)
-                                : (typeof link.source === 'string' ? link.source : link.source.id);
-                            return otherId;
-                        });
+                const newColors = new Map();
 
-                    if (neighbors.length > 0) {
-                        // Randomly select one neighbor
-                        const neighborId = neighbors[Math.floor(Math.random() * neighbors.length)];
-                        const nodeColor = currentColors.get(node.id) ?? node.color;
-                        const neighborColor = currentColors.get(neighborId) ?? 0;
-                        
-                        // Exchange colors with weighted averaging
-                        const newNodeColor = nodeColor * (1 - mixRatio) + neighborColor * mixRatio;
-                        const newNeighborColor = neighborColor * (1 - mixRatio) + nodeColor * mixRatio;
-                        
-                        newColors.set(node.id, newNodeColor);
-                        newColors.set(neighborId, newNeighborColor);
-                    }
-                }
+                // For each node, calculate the new color based on neighbors
+                data.nodes.forEach(node => {
+                    const nodeColor = currentColors.get(node.id) ?? node.color;
+                    const neighborIds = neighbors.get(node.id)?.map(neighbor => neighbor.id) ?? [];
+
+                    let totalColor = nodeColor;
+                    neighborIds.forEach(neighborId => {
+                        const neighborColor = currentColors.get(neighborId) ?? node.color;
+                        totalColor += neighborColor;
+                    });
+
+                    const newColor = totalColor / (neighborIds.length + 1);
+                    newColors.set(node.id, newColor);
+                });
+
                 return newColors;
             });
 
@@ -231,16 +219,21 @@
     });
 
     // Update node colors when store changes
-    $: {
-        if (svgElement && $colors) {
-            d3.select(svgElement)
-                .selectAll("circle")
-                .attr("fill", function(d) {
-                    const node = d as Node;
-                    const color = $colors.get(node.id) ?? node.color;
-                    return d3.interpolateSpectral(color / 10);
-                });
-        }
+    $: if (svgElement && $colors) {
+        const colorValues = Array.from($colors.values());
+        const minColor = Math.min(...colorValues);
+        const maxColor = Math.max(...colorValues);
+
+        const colorScale = d3.scaleSequential(d3.interpolateSpectral)
+            .domain([minColor, maxColor]);
+
+        d3.select(svgElement)
+            .selectAll("circle")
+            .attr("fill", function(d) {
+                const node = d as Node;
+                const color = $colors.get(node.id) ?? node.color;
+                return colorScale(color);
+            });
     }
   </script>
   
