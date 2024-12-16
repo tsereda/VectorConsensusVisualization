@@ -7,18 +7,23 @@
     let numExchanges = 3;
     let mixRatio = 0.3;
     let informedRatio = 0.1; // New parameter
+    let selectedNodeId: string | null = null;
     
     function generateGraph(count: number, sparsityFactor: number) {
         const pssNodes = new Map<string, PeerSamplingService>();
+        // Select one random index for the informed node
+        const informedIndex = Math.floor(Math.random() * count);
         
         // Create nodes with PSS
         const nodes = Array.from({ length: count }, (_, i) => {
             const id = String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i/26) : '');
-            const informed = Math.random() < informedRatio;
-            const color = Math.floor(Math.random() * 10) + 1;
-            const pss = new PeerSamplingService(id, color);
+            // Only one node will be informed - either the randomly selected one or the manually selected one
+            const informed = selectedNodeId === null ? 
+                (i === informedIndex) : 
+                (id === selectedNodeId);
+            const pss = new PeerSamplingService(id, informed);
             pssNodes.set(id, pss);
-            return { id, color, informed };
+            return { id, informed };
         });
 
         // Initialize connections using PSS
@@ -58,6 +63,15 @@
 
     // Update graph when parameters change
     $: {
+        const newGraph = generateGraph(nodeCount, sparsity);
+        nodes = newGraph.nodes;
+        links = newGraph.links;
+        pssNodes = newGraph.pssNodes;
+        graphData = { nodes, links };
+    }
+
+    function handleNodeSelect(event: CustomEvent<string>) {
+        selectedNodeId = event.detail;
         const newGraph = generateGraph(nodeCount, sparsity);
         nodes = newGraph.nodes;
         links = newGraph.links;
@@ -107,10 +121,13 @@
                 type="range" 
                 id="mixRatio" 
                 bind:value={mixRatio} 
-                min="0.1" 
-                max="0.9" 
-                step="0.1"
+                min="0.01" 
+                max="0.09" 
+                step="0.01"
             />
+        </div>
+        <div class="selected-node">
+            Selected Node: {selectedNodeId ?? 'None'}
         </div>
     </div>
 
@@ -118,6 +135,8 @@
         data={graphData} 
         {numExchanges}
         {mixRatio}
+        {selectedNodeId}
+        on:nodeSelect={handleNodeSelect}
     />
 </div>
 
@@ -149,6 +168,14 @@
 
     input[type="range"] {
         width: 100%;
+    }
+
+    .selected-node {
+        font-weight: bold;
+        text-align: center;
+        padding: 0.5rem;
+        background: #fff;
+        border-radius: 4px;
     }
 
     /* Add this to make the ForceGraph fill remaining space */
