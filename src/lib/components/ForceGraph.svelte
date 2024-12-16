@@ -2,16 +2,16 @@
     import { onMount, onDestroy } from 'svelte';
     import * as d3 from 'd3';
     import { writable } from 'svelte/store';
+    import type { PeerNode } from '$lib/pss';
 
     // Define types for our data
     interface Node {
       id: string;
-      color: number;
+      informed: boolean;
       x?: number;
       y?: number;
       fx?: number | null;
       fy?: number | null;
-      adjustedColor?: number;
     }
   
     interface Link {
@@ -34,8 +34,8 @@
     let width = 928;
     let height = 680;
 
-    // Make color state reactive
-    const colors = writable<Map<string, number>>(new Map());
+    // Store for tracking informed state
+    const informedStates = writable<Map<string, boolean>>(new Map());
     let animationFrame: number;
     let neighbors: Map<string, Node[]>;
 
@@ -62,26 +62,6 @@
             neighbors.get(targetId)!.push(nodeById.get(sourceId)!);
         });
 
-        // Compute adjusted colors with neighbor influence
-        nodes.forEach(node => {
-            const neighborNodes = neighbors.get(node.id)!;
-            if (neighborNodes.length === 0) {
-                node.adjustedColor = node.color;
-                return;
-            }
-            
-            const neighborAvg = neighborNodes.reduce((sum, n) => sum + n.color, 0) / neighborNodes.length;
-            // Ensure we're actually mixing the colors (50-50)
-            node.adjustedColor = (node.color + neighborAvg) / 2;
-            
-            // Log to verify neighbor influence
-            console.log(`Node ${node.id}: original=${node.color}, neighbors avg=${neighborAvg}, adjusted=${node.adjustedColor}`);
-        });
-
-        // Use a wider color spectrum
-        const colorScale = d3.scaleSequential(d3.interpolateSpectral)
-            .domain([0, d3.max(nodes, d => d.adjustedColor) || 1]);
-
         const svg = d3.select(svgElement)
             .attr("viewBox", [-width / 2, -height / 2, width, height]);
 
@@ -107,8 +87,8 @@
             .selectAll<SVGCircleElement, Node>("circle")
             .data(nodes)
             .join("circle")
-            .attr("r", 8) // Increased from 5
-            .attr("fill", (d: Node) => colorScale(d.adjustedColor || 0));
+            .attr("r", 8)
+            .attr("fill", d => d.informed ? "#ff4444" : "#4444ff");
   
         node.append("title")
             .text((d: Node) => d.id);
@@ -147,42 +127,47 @@
                 .attr("cy", d => d.y ?? 0);
         });
 
-        // Initialize colors if not already set
-        const currentColors = new Map();
+        // Initialize informed states
+        const currentStates = new Map();
         data.nodes.forEach(node => {
-            currentColors.set(node.id, node.color);
+            currentStates.set(node.id, node.informed);
         });
-        colors.set(currentColors);
-
-        // Replace interval with requestAnimationFrame
-        let round = 0;
+        informedStates.set(currentStates);
 
         function animate() {
-            colors.update(currentColors => {
-                const newColors = new Map();
-
-                // For each node, calculate the new color based on neighbors
-                data.nodes.forEach(node => {
-                    const nodeColor = currentColors.get(node.id) ?? node.color;
-                    const neighborIds = neighbors.get(node.id)?.map(neighbor => neighbor.id) ?? [];
-
-                    let totalColor = nodeColor;
-                    neighborIds.forEach(neighborId => {
-                        const neighborColor = currentColors.get(neighborId) ?? node.color;
-                        totalColor += neighborColor;
-                    });
-
-                    const newColor = totalColor / (neighborIds.length + 1);
-                    newColors.set(node.id, newColor);
-                });
-
-                return newColors;
-            });
-
+            updateInformedStates();
             animationFrame = requestAnimationFrame(animate);
         }
 
         animate();
+    }
+
+    function updateInformedStates() {
+        informedStates.update(currentStates => {
+            const newStates = new Map();
+            
+            // Update informed states based on neighbors
+            for (let i = 0; i < numExchanges; i++) {
+                data.nodes.forEach(node => {
+                    const nodeInformed = currentStates.get(node.id) ?? node.informed;
+                    const neighborIds = neighbors.get(node.id)?.map(n => n.id) ?? [];
+                    
+                    if (neighborIds.length > 0) {
+                        // Randomly select a neighbor
+                        const randomNeighborId = neighborIds[Math.floor(Math.random() * neighborIds.length)];
+                        const neighborInformed = currentStates.get(randomNeighborId) ?? false;
+                        
+                        // Update informed state based on neighbor
+                        const newInformed = nodeInformed || (Math.random() < mixRatio && neighborInformed);
+                        newStates.set(node.id, newInformed);
+                    } else {
+                        newStates.set(node.id, nodeInformed);
+                    }
+                });
+            }
+            
+            return newStates;
+        });
     }
 
     onMount(() => {
@@ -218,21 +203,14 @@
         if (simulation) simulation.stop();
     });
 
-    // Update node colors when store changes
-    $: if (svgElement && $colors) {
-        const colorValues = Array.from($colors.values());
-        const minColor = Math.min(...colorValues);
-        const maxColor = Math.max(...colorValues);
-
-        const colorScale = d3.scaleSequential(d3.interpolateSpectral)
-            .domain([minColor, maxColor]);
-
+    // Update node colors when informed states change
+    $: if (svgElement && $informedStates) {
         d3.select(svgElement)
             .selectAll("circle")
             .attr("fill", function(d) {
                 const node = d as Node;
-                const color = $colors.get(node.id) ?? node.color;
-                return colorScale(color);
+                const informed = $informedStates.get(node.id) ?? node.informed;
+                return informed ? "#ff4444" : "#4444ff";
             });
     }
   </script>
