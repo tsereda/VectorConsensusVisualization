@@ -3,21 +3,17 @@
     import { PeerSamplingService, type PeerNode } from '$lib/pss';
     
     let nodeCount = 300;
-    let sparsity = 0.01;
     let numExchanges = 3;
     let mixRatio = 0.3;
-    let informedRatio = 0.1; // New parameter
     let selectedNodeId: string | null = null;
     
-    function generateGraph(count: number, sparsityFactor: number) {
+    function generateGraph(count: number) {
         const pssNodes = new Map<string, PeerSamplingService>();
-        // Select one random index for the informed node
         const informedIndex = Math.floor(Math.random() * count);
         
-        // Create nodes with PSS
+        // Create nodes
         const nodes = Array.from({ length: count }, (_, i) => {
             const id = String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i/26) : '');
-            // Only one node will be informed - either the randomly selected one or the manually selected one
             const informed = selectedNodeId === null ? 
                 (i === informedIndex) : 
                 (id === selectedNodeId);
@@ -26,44 +22,41 @@
             return { id, informed };
         });
 
-        // Initialize connections using PSS
-        const links: { source: string; target: string; value: number }[] = [];
-        const maxLinksPerNode = Math.max(1, Math.floor(count * sparsityFactor / 2));
+        // Generate MST edges
+        const mstEdges = PeerSamplingService.generateMST(nodes.map(n => n.id));
         
-        nodes.forEach(node => {
-            const pss = pssNodes.get(node.id)!;
-            const numLinks = Math.floor(Math.random() * maxLinksPerNode) + 1;
+        // Create links from MST
+        const links = mstEdges.map(edge => ({
+            source: edge.source,
+            target: edge.target,
+            value: 1
+        }));
+
+        // Initialize PSS views based on MST
+        mstEdges.forEach(edge => {
+            const sourcePss = pssNodes.get(edge.source)!;
+            const targetPss = pssNodes.get(edge.target)!;
             
-            // Create random connections
-            const availableTargets = nodes.filter(n => n.id !== node.id);
-            const targets = availableTargets
-                .sort(() => Math.random() - 0.5)
-                .slice(0, numLinks);
+            sourcePss.exchangeViews({
+                peers: new Map([[edge.target, { id: edge.target, informed: targetPss.isInformed(), age: 0 }]]),
+                maxSize: 30
+            });
             
-            targets.forEach(target => {
-                const targetPss = pssNodes.get(target.id)!;
-                pss.exchangeViews({ 
-                    peers: new Map([[target.id, { id: target.id, color: target.color, age: 0 }]]), 
-                    maxSize: 30 
-                });
-                
-                links.push({
-                    source: node.id,
-                    target: target.id,
-                    value: 1
-                });
+            targetPss.exchangeViews({
+                peers: new Map([[edge.source, { id: edge.source, informed: sourcePss.isInformed(), age: 0 }]]),
+                maxSize: 30
             });
         });
 
         return { nodes, links, pssNodes };
     }
 
-    let { nodes, links, pssNodes } = generateGraph(nodeCount, sparsity);
+    let { nodes, links, pssNodes } = generateGraph(nodeCount);
     let graphData = { nodes, links };
 
     // Update graph when parameters change
     $: {
-        const newGraph = generateGraph(nodeCount, sparsity);
+        const newGraph = generateGraph(nodeCount);
         nodes = newGraph.nodes;
         links = newGraph.links;
         pssNodes = newGraph.pssNodes;
@@ -72,7 +65,7 @@
 
     function handleNodeSelect(event: CustomEvent<string>) {
         selectedNodeId = event.detail;
-        const newGraph = generateGraph(nodeCount, sparsity);
+        const newGraph = generateGraph(nodeCount);
         nodes = newGraph.nodes;
         links = newGraph.links;
         pssNodes = newGraph.pssNodes;
@@ -83,29 +76,18 @@
 <div class="container">
     <div class="controls">
         <div class="slider-container">
-            <label for="nodeCount">Total Nodes: {nodeCount}</label>
+            <label for="nodeCount">Number of Nodes: {nodeCount}</label>
             <input 
                 type="range" 
                 id="nodeCount" 
                 bind:value={nodeCount} 
-                min="2" 
-                max="900" 
-                step="1"
+                min="10" 
+                max="500" 
+                step="10"
             />
         </div>
         <div class="slider-container">
-            <label for="sparsity">Connection Density: {sparsity.toFixed(3)}</label>
-            <input 
-                type="range" 
-                id="sparsity" 
-                bind:value={sparsity} 
-                min="0.001" 
-                max=".05" 
-                step="0.001"
-            />
-        </div>
-        <div class="slider-container">
-            <label for="numExchanges">Color Exchanges per Frame: {numExchanges}</label>
+            <label for="numExchanges">Exchanges per Frame: {numExchanges}</label>
             <input 
                 type="range" 
                 id="numExchanges" 
@@ -116,71 +98,76 @@
             />
         </div>
         <div class="slider-container">
-            <label for="mixRatio">Color Mix Speed: {mixRatio.toFixed(2)}</label>
+            <label for="mixRatio">Exchange Rate: {mixRatio.toFixed(2)}</label>
             <input 
                 type="range" 
                 id="mixRatio" 
                 bind:value={mixRatio} 
                 min="0.01" 
-                max="0.09" 
+                max="1.0" 
                 step="0.01"
             />
         </div>
         <div class="selected-node">
-            Selected Node: {selectedNodeId ?? 'None'}
+            Selected Node: {selectedNodeId ?? 'Random'}
         </div>
     </div>
 
-    <ForceGraph 
-        data={graphData} 
-        {numExchanges}
-        {mixRatio}
-        {selectedNodeId}
-        on:nodeSelect={handleNodeSelect}
-    />
+    <div class="graph-container">
+        <ForceGraph 
+            data={graphData}
+            {numExchanges}
+            {mixRatio}
+            {selectedNodeId}
+            on:nodeSelect={handleNodeSelect}
+        />
+    </div>
 </div>
 
 <style>
     .container {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
-        height: 100vh; /* Full viewport height */
+        height: 100vh;
         padding: 1rem;
         box-sizing: border-box;
+        gap: 1rem;
     }
 
     .controls {
-        flex: 0 0 auto; /* Don't grow or shrink */
+        flex: 0 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
         padding: 1rem;
         background: #f5f5f5;
         border-radius: 4px;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
     }
 
     .slider-container {
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
+        min-width: 200px;
+    }
+
+    .selected-node {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: #fff;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .graph-container {
+        flex: 1;
+        background: #fff;
+        border-radius: 4px;
+        overflow: hidden;
     }
 
     input[type="range"] {
         width: 100%;
-    }
-
-    .selected-node {
-        font-weight: bold;
-        text-align: center;
-        padding: 0.5rem;
-        background: #fff;
-        border-radius: 4px;
-    }
-
-    /* Add this to make the ForceGraph fill remaining space */
-    :global(.force-graph-container) {
-        flex: 1;
-        min-height: 0; /* Important for Firefox */
     }
 </style>
