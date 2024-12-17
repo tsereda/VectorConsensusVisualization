@@ -1,10 +1,11 @@
 <script lang="ts">
     import ForceGraph from '$lib/components/ForceGraph.svelte';
     import { PeerSamplingService, type PeerNode } from '$lib/pss';
-    
+    import { onMount } from 'svelte';
+
     let nodeCount = 300;
-    let numExchanges = 3;
-    let mixRatio = 0.3;
+    let numExchanges = 1;
+    let mixRatio = 0.1;
     let selectedNodeId: string | null = null;
     
     function generateGraph(count: number) {
@@ -71,6 +72,61 @@
         pssNodes = newGraph.pssNodes;
         graphData = { nodes, links };
     }
+
+    // In +page.svelte, add a function to perform PSS exchanges
+    function performExchanges() {
+        // First, perform PSS exchanges
+        pssNodes.forEach((pss, nodeId) => {
+            // Only exchange with probability based on mixRatio
+            if (Math.random() < mixRatio) {
+                const peer = pss.selectPeer();
+                if (peer) {
+                    const peerPss = pssNodes.get(peer.id);
+                    if (peerPss) {
+                        // Exchange views between nodes
+                        pss.exchangeViews({
+                            peers: peerPss.view.peers,
+                            maxSize: peerPss.view.maxSize
+                        });
+                        peerPss.exchangeViews({
+                            peers: pss.view.peers,
+                            maxSize: pss.view.maxSize
+                        });
+                    }
+                }
+            }
+        });
+
+        // Then update visualization
+        links = [];
+        pssNodes.forEach((pss, nodeId) => {
+            const peers = pss.getView();
+            peers.forEach(peer => {
+                if (peer.id !== nodeId) {
+                    links.push({
+                        source: nodeId,
+                        target: peer.id,
+                        value: 1
+                    });
+                }
+            });
+        });
+
+        // Update node information
+        nodes = nodes.map(node => ({
+            ...node,
+            informed: pssNodes.get(node.id)?.isInformed() ?? node.informed
+        }));
+
+        graphData = { nodes, links };
+    }
+
+    // Add interval to regularly perform exchanges
+    let exchangeInterval: number;
+    onMount(() => {
+        exchangeInterval = setInterval(performExchanges, 1000 / numExchanges);
+        return () => clearInterval(exchangeInterval);
+    });
 </script>
 
 <div class="container">

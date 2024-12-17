@@ -68,10 +68,19 @@
         if (simulation) simulation.stop();
         
         simulation = d3.forceSimulation<Node>(nodes)
-            .force("link", d3.forceLink<Node, d3.SimulationLinkDatum<Node>>(links).id((d: Node) => d.id))
-            .force("charge", d3.forceManyBody())
-            .force("x", d3.forceX())
-            .force("y", d3.forceY());
+            .force("link", d3.forceLink<Node, d3.SimulationLinkDatum<Node>>(links)
+                .id((d: Node) => d.id)
+                .distance(150)     // Increase distance between nodes
+                .strength(0.3))   // Stronger links for more stability
+            .force("charge", d3.forceManyBody()
+                .strength(-100)   // Stronger repulsion to prevent clustering
+                .distanceMax(300)) // Limit repulsion range
+            .force("center", d3.forceCenter()) // Add centering force
+            .force("x", d3.forceX().strength(0.02))  // Very weak X positioning
+            .force("y", d3.forceY().strength(0.02))  // Very weak Y positioning
+            .velocityDecay(0.3)   // Add friction to movements
+            .alphaDecay(0.01)     // Slower cooling
+            .alphaTarget(0);      // Let simulation settle completely
   
         const link = svg.append("g")
             .attr("stroke", "#999")
@@ -93,18 +102,18 @@
         node.append("title")
             .text((d: Node) => d.id);
   
-        function dragstarted(event: d3.D3DragEvent<SVGCircleElement, Node, Node>) {
+        function dragstarted(event: d3.D3DragEvent<SVGCircleElement, Node>) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             event.subject.fx = event.subject.x;
             event.subject.fy = event.subject.y;
         }
   
-        function dragged(event: d3.D3DragEvent<SVGCircleElement, Node, Node>) {
+        function dragged(event: d3.D3DragEvent<SVGCircleElement, Node>) {
             event.subject.fx = event.x;
             event.subject.fy = event.y;
         }
   
-        function dragended(event: d3.D3DragEvent<SVGCircleElement, Node, Node>) {
+        function dragended(event: d3.D3DragEvent<SVGCircleElement, Node>) {
             if (!event.active) simulation.alphaTarget(0);
             event.subject.fx = null;
             event.subject.fy = null;
@@ -144,27 +153,35 @@
 
     function updateInformedStates() {
         informedStates.update(currentStates => {
-            const newStates = new Map();
+            const newStates = new Map(currentStates);
             
-            // Update informed states based on neighbors
-            for (let i = 0; i < numExchanges; i++) {
-                data.nodes.forEach(node => {
-                    const nodeInformed = currentStates.get(node.id) ?? node.informed;
-                    const neighborIds = neighbors.get(node.id)?.map(n => n.id) ?? [];
+            // For each node, attempt view exchanges
+            data.nodes.forEach(node => {
+                // Get neighbors from links
+                const nodeNeighbors = data.links
+                    .filter(link => 
+                        (link.source as Node).id === node.id || 
+                        (link.target as Node).id === node.id)
+                    .map(link => 
+                        (link.source as Node).id === node.id ? 
+                            (link.target as Node) : 
+                            (link.source as Node)
+                    );
+
+                // Randomly select neighbor for exchange
+                if (nodeNeighbors.length > 0 && Math.random() < mixRatio) {
+                    const neighbor = nodeNeighbors[Math.floor(Math.random() * nodeNeighbors.length)];
                     
-                    if (neighborIds.length > 0) {
-                        // Randomly select a neighbor
-                        const randomNeighborId = neighborIds[Math.floor(Math.random() * neighborIds.length)];
-                        const neighborInformed = currentStates.get(randomNeighborId) ?? false;
-                        
-                        // Update informed state based on neighbor
-                        const newInformed = nodeInformed || (Math.random() < mixRatio && neighborInformed);
-                        newStates.set(node.id, newInformed);
-                    } else {
-                        newStates.set(node.id, nodeInformed);
+                    // Exchange informed states
+                    const nodeInformed = currentStates.get(node.id) ?? node.informed;
+                    const neighborInformed = currentStates.get(neighbor.id) ?? neighbor.informed;
+                    
+                    if (nodeInformed || neighborInformed) {
+                        newStates.set(node.id, true);
+                        newStates.set(neighbor.id, true);
                     }
-                });
-            }
+                }
+            });
             
             return newStates;
         });
@@ -192,7 +209,50 @@
 
     // React to data changes
     $: if (svgElement && data) {
-        createGraph(data);
+        // Update nodes and links while preserving simulation
+        if (simulation) {
+            // Preserve existing positions
+            const oldNodes = new Map(simulation.nodes().map(d => [d.id, d]));
+            data.nodes.forEach(node => {
+                const oldNode = oldNodes.get(node.id);
+                if (oldNode) {
+                    node.x = oldNode.x;
+                    node.y = oldNode.y;
+                }
+            });
+            // Update simulation
+            simulation.nodes(data.nodes);
+            const linkForce = simulation.force("link") as d3.ForceLink<Node, d3.SimulationLinkDatum<Node>>;
+            if (linkForce) linkForce.links(data.links);
+
+            // Update visual elements
+            const svg = d3.select(svgElement);
+            
+            // Update links
+            svg.selectAll("line")
+                .data(data.links)
+                .join("line")
+                .attr("stroke", "#999")
+                .attr("stroke-opacity", 0.6)
+                .attr("stroke-width", (d: Link) => Math.sqrt((d as Link).value));
+
+            // Update nodes
+            svg.selectAll("circle")
+                .data(data.nodes)
+                .join("circle")
+                .attr("r", 8)
+                .attr("fill", d => d.informed ? "#ff4444" : "#4444ff")
+                .call(d3.drag<SVGCircleElement, Node>()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+
+            // Restart simulation
+            simulation.alpha(0.1).restart();
+        } else {
+            // Initial creation
+            createGraph(data);
+        }
     }
   
     // Clean up simulation on component destroy
