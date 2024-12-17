@@ -251,6 +251,9 @@
         background: #f5f5f5;
         border-radius: 4px;
         padding: 1rem;
+        height: 150px;
+        max-height: 150px; /* Set a fixed maximum height */
+        overflow-y: auto;  /* Enable vertical scrolling */
     }
 
     input[type="range"] {
