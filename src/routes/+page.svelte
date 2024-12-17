@@ -5,7 +5,7 @@
 
     let nodeCount = 300;
     let numExchanges = 1;
-    let mixRatio = 0.1;
+    let mixRatio = 0.001;
     let selectedNodeId: string | null = null;
     
     function generateGraph(count: number) {
@@ -154,14 +154,14 @@
             />
         </div>
         <div class="slider-container">
-            <label for="mixRatio">Exchange Rate: {mixRatio.toFixed(2)}</label>
+            <label for="mixRatio">Exchange Rate: {mixRatio.toFixed(3)}</label>
             <input 
                 type="range" 
                 id="mixRatio" 
                 bind:value={mixRatio} 
-                min="0.01" 
-                max="1.0" 
-                step="0.01"
+                min="0.001" 
+                max="0.1" 
+                step="0.001"
             />
         </div>
         <div class="selected-node">

@@ -78,7 +78,7 @@
             .force("center", d3.forceCenter()) // Add centering force
             .force("x", d3.forceX().strength(0.02))  // Very weak X positioning
             .force("y", d3.forceY().strength(0.02))  // Very weak Y positioning
-            .velocityDecay(0.3)   // Add friction to movements
+            .velocityDecay(0.9)   // Add friction to movements
             .alphaDecay(0.01)     // Slower cooling
             .alphaTarget(0);      // Let simulation settle completely
   
