@@ -5,7 +5,7 @@
     let nodeCount = 100;
     let numExchanges = 1;
     let mixRatio = 0.001;
-    let density = 0.1; // Add density parameter
+    let density = 0; // Add density parameter
     let selectedNodeId: string | null = null;
     
     function generateGraph(count: number, density: number) {
@@ -132,7 +132,7 @@
                 type="range" 
                 id="density" 
                 bind:value={density} 
-                min="0.01" 
+                min="0." 
                 max="1" 
                 step="0.01"
             />
