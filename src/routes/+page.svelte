@@ -7,7 +7,10 @@
     let numExchanges = 1;
     let mixRatio = 0.001;
     let selectedNodeId: string | null = null;
-    
+
+    let networkDensity = 0;
+    let avgDegree = 0;
+
     function generateGraph(count: number) {
         const pssNodes = new Map<string, PeerSamplingService>();
         const informedIndex = Math.floor(Math.random() * count);
@@ -175,12 +178,42 @@
             {numExchanges}
             {mixRatio}
             {selectedNodeId}
+            bind:networkDensity
+            bind:avgDegree
             on:nodeSelect={handleNodeSelect}
         />
+    </div>
+
+    <div class="stats-overlay">
+        <div class="stat">
+            <span>Network Density:</span>
+            <span>{networkDensity.toFixed(3)}</span>
+        </div>
+        <div class="stat">
+            <span>Average Degree:</span>
+            <span>{avgDegree.toFixed(1)}</span>
+        </div>
     </div>
 </div>
 
 <style>
+    .stats-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stat {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        font-size: 0.9rem;
+        margin: 2px 0;
+    }
     .container {
         display: flex;
         flex-direction: column;

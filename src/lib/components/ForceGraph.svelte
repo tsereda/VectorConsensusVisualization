@@ -39,6 +39,23 @@
     let animationFrame: number;
     let neighbors: Map<string, Node[]>;
 
+    // Add density metrics tracking
+    export let networkDensity = 0;
+    export let avgDegree = 0;
+
+    function calculateDensityMetrics(nodes: Node[], links: Link[]) {
+        // Network density = actual edges / possible edges
+        // For undirected graph: possible edges = n(n-1)/2
+        const n = nodes.length;
+        const possibleEdges = (n * (n - 1)) / 2;
+        networkDensity = links.length / possibleEdges;
+        
+        // Average degree = 2 * edges / nodes
+        avgDegree = (2 * links.length) / n;
+        
+        return { networkDensity, avgDegree };
+    }
+
     function createGraph(data: GraphData) {
         // Clear existing graph
         d3.select(svgElement).selectAll("*").remove();
@@ -53,6 +70,8 @@
         // Build neighbors map
         neighbors = new Map<string, Node[]>();
         nodes.forEach(node => neighbors.set(node.id, []));
+
+        calculateDensityMetrics(nodes, links);
 
         links.forEach(link => {
             const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
