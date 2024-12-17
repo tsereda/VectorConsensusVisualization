@@ -2,12 +2,13 @@
     import ForceGraph from '$lib/components/ForceGraph.svelte';
     import { PeerSamplingService, type PeerNode } from '$lib/pss';
     
-    let nodeCount = 300;
-    let numExchanges = 3;
-    let mixRatio = 0.3;
+    let nodeCount = 100;
+    let numExchanges = 1;
+    let mixRatio = 0.001;
+    let density = 0.1; // Add density parameter
     let selectedNodeId: string | null = null;
     
-    function generateGraph(count: number) {
+    function generateGraph(count: number, density: number) {
         const pssNodes = new Map<string, PeerSamplingService>();
         const informedIndex = Math.floor(Math.random() * count);
         
@@ -32,6 +33,23 @@
             value: 1
         }));
 
+        // Generate random links until we reach a certain density
+        const maxLinks = Math.floor(count * (count - 1) * density / 2);
+        const randomLinks = new Set<string>();
+
+        while (randomLinks.size < maxLinks) {
+            const source = nodes[Math.floor(Math.random() * count)].id;
+            const target = nodes[Math.floor(Math.random() * count)].id;
+            if (source !== target) {
+                randomLinks.add([source, target].sort().join('-'));
+            }
+        }
+
+        randomLinks.forEach(link => {
+            const [source, target] = link.split('-');
+            links.push({ source, target, value: 1 });
+        });
+
         // Initialize PSS views based on MST
         mstEdges.forEach(edge => {
             const sourcePss = pssNodes.get(edge.source)!;
@@ -51,12 +69,12 @@
         return { nodes, links, pssNodes };
     }
 
-    let { nodes, links, pssNodes } = generateGraph(nodeCount);
+    let { nodes, links, pssNodes } = generateGraph(nodeCount, density);
     let graphData = { nodes, links };
 
     // Update graph when parameters change
     $: {
-        const newGraph = generateGraph(nodeCount);
+        const newGraph = generateGraph(nodeCount, density);
         nodes = newGraph.nodes;
         links = newGraph.links;
         pssNodes = newGraph.pssNodes;
@@ -65,7 +83,7 @@
 
     function handleNodeSelect(event: CustomEvent<string>) {
         selectedNodeId = event.detail;
-        const newGraph = generateGraph(nodeCount);
+        const newGraph = generateGraph(nodeCount, density);
         nodes = newGraph.nodes;
         links = newGraph.links;
         pssNodes = newGraph.pssNodes;
@@ -98,18 +116,26 @@
             />
         </div>
         <div class="slider-container">
-            <label for="mixRatio">Exchange Rate: {mixRatio.toFixed(2)}</label>
+            <label for="mixRatio">Exchange Rate: {mixRatio.toFixed(3)}</label>
             <input 
                 type="range" 
                 id="mixRatio" 
                 bind:value={mixRatio} 
-                min="0.01" 
-                max="1.0" 
-                step="0.01"
+                min="0.001" 
+                max=".1" 
+                step="0.001"
             />
         </div>
-        <div class="selected-node">
-            Selected Node: {selectedNodeId ?? 'Random'}
+        <div class="slider-container">
+            <label for="density">Density: {density.toFixed(2)}</label>
+            <input 
+                type="range" 
+                id="density" 
+                bind:value={density} 
+                min="0.01" 
+                max="1" 
+                step="0.01"
+            />
         </div>
     </div>
 

@@ -70,8 +70,9 @@
         simulation = d3.forceSimulation<Node>(nodes)
             .force("link", d3.forceLink<Node, d3.SimulationLinkDatum<Node>>(links).id((d: Node) => d.id))
             .force("charge", d3.forceManyBody())
-            .force("x", d3.forceX())
-            .force("y", d3.forceY());
+            .force("charge", d3.forceManyBody().strength(-400)) // Increase repulsion strength
+            .force("x", d3.forceX().strength(0.1)) // Adjust x force strength
+            .force("y", d3.forceY().strength(0.1)); // Adjust y force strength
   
         const link = svg.append("g")
             .attr("stroke", "#999")
