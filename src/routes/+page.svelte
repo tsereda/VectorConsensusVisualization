@@ -3,7 +3,7 @@
     import { PeerSamplingService, type PeerNode } from '$lib/pss';
     import { onMount } from 'svelte';
 
-    let nodeCount = 300;
+    let nodeCount = 20;
     let numExchanges = 1;
     let mixRatio = 0.001;
     let selectedNodeId: string | null = null;
