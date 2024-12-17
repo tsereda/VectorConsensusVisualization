@@ -1,13 +1,21 @@
 <script lang="ts">
     import ForceGraph from '$lib/components/ForceGraph.svelte';
     import { PeerSamplingService, type PeerNode } from '$lib/pss';
-    
+    import { writable, type Writable } from 'svelte/store';
+
     let nodeCount = 10;
     let numExchanges = 1;
     let mixRatio = 0.001;
     let density = 0; // Add density parameter
     let selectedNodeId: string | null = null;
-    
+    let isRunning = false;
+    let propagationMetric: Writable<number[]> = writable([]);
+    let startTime: number | null = null;
+    let nodes: { id: string; informed: boolean }[] = [];
+    let links: { source: string; target: string; value: number }[] = [];
+    let pssNodes: Map<string, PeerSamplingService> = new Map();
+    let graphData = { nodes, links };
+
     function generateGraph(count: number, density: number) {
         const pssNodes = new Map<string, PeerSamplingService>();
         const informedIndex = Math.floor(Math.random() * count);
@@ -69,26 +77,54 @@
         return { nodes, links, pssNodes };
     }
 
-    let { nodes, links, pssNodes } = generateGraph(nodeCount, density);
-    let graphData = { nodes, links };
-
-    // Update graph when parameters change
-    $: {
+    function initializeGraph() {
         const newGraph = generateGraph(nodeCount, density);
         nodes = newGraph.nodes;
         links = newGraph.links;
         pssNodes = newGraph.pssNodes;
         graphData = { nodes, links };
     }
+
+    initializeGraph();
 
     function handleNodeSelect(event: CustomEvent<string>) {
         selectedNodeId = event.detail;
-        const newGraph = generateGraph(nodeCount, density);
-        nodes = newGraph.nodes;
-        links = newGraph.links;
-        pssNodes = newGraph.pssNodes;
-        graphData = { nodes, links };
+        initializeGraph();
     }
+
+    function startSimulation() {
+        isRunning = true;
+        startTime = Date.now();
+        propagationMetric.set([]);
+        runSimulation();
+    }
+
+    function runSimulation() {
+        if (!isRunning) return;
+
+        // Update the graph and calculate the propagation metric
+        const informedCount = nodes.filter(node => node.informed).length;
+        const propagationPercentage = (informedCount / nodes.length) * 100;
+        propagationMetric.update(metrics => [...metrics, propagationPercentage]);
+
+        // Continue the simulation
+        setTimeout(runSimulation, 1000); // Run every second
+    }
+
+    function stopSimulation() {
+        isRunning = false;
+    }
+
+    function handleInformedStatesChange(event) {
+        const { informedStates } = event.detail;
+        nodes.forEach(node => {
+            node.informed = informedStates.get(node.id) ?? node.informed;
+        });
+    }
+
+    // $: if (!isRunning) {
+    //     initializeGraph();
+    // }
 </script>
 
 <div class="container">
@@ -102,6 +138,7 @@
                 min="10" 
                 max="500" 
                 step="10"
+                on:change={initializeGraph}
             />
         </div>
         <div class="slider-container">
@@ -113,6 +150,7 @@
                 min="1" 
                 max="10" 
                 step="1"
+                on:change={initializeGraph}
             />
         </div>
         <div class="slider-container">
@@ -124,6 +162,7 @@
                 min="0.001" 
                 max=".1" 
                 step="0.001"
+                on:change={initializeGraph}
             />
         </div>
         <div class="slider-container">
@@ -135,8 +174,11 @@
                 min="0." 
                 max="1" 
                 step="0.01"
+                on:change={initializeGraph}
             />
         </div>
+        <button on:click={startSimulation} disabled={isRunning}>Start</button>
+        <button on:click={stopSimulation} disabled={!isRunning}>Stop</button>
     </div>
 
     <div class="graph-container">
@@ -145,8 +187,19 @@
             {numExchanges}
             {mixRatio}
             {selectedNodeId}
+            {isRunning}
             on:nodeSelect={handleNodeSelect}
+            on:informedStatesChange={handleInformedStatesChange}
         />
+    </div>
+
+    <div class="metrics">
+        <h3>Propagation Metric</h3>
+        <ul>
+            {#each $propagationMetric as metric, index}
+                <li>Time {index + 1}s: {metric.toFixed(2)}%</li>
+            {/each}
+        </ul>
     </div>
 </div>
 
@@ -191,6 +244,13 @@
         background: #fff;
         border-radius: 4px;
         overflow: hidden;
+    }
+
+    .metrics {
+        flex: 0 0 auto;
+        background: #f5f5f5;
+        border-radius: 4px;
+        padding: 1rem;
     }
 
     input[type="range"] {
