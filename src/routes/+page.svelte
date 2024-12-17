@@ -2,7 +2,7 @@
     import ForceGraph from '$lib/components/ForceGraph.svelte';
     import { PeerSamplingService, type PeerNode } from '$lib/pss';
     
-    let nodeCount = 100;
+    let nodeCount = 10;
     let numExchanges = 1;
     let mixRatio = 0.001;
     let density = 0; // Add density parameter
