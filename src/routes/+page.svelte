@@ -7,6 +7,7 @@
     let numExchanges = 1;
     let mixRatio = 0.001;
     let selectedNodeId: string | null = null;
+    let targetDensity = 0.1; // Add this with other state variables
 
     let networkDensity = 0;
     let avgDegree = 0;
@@ -21,7 +22,7 @@
             const informed = selectedNodeId === null ? 
                 (i === informedIndex) : 
                 (id === selectedNodeId);
-            const pss = new PeerSamplingService(id, informed);
+            const pss = new PeerSamplingService(id, informed, Math.floor(count * 0.9));
             pssNodes.set(id, pss);
             return { id, informed };
         });
@@ -35,6 +36,18 @@
             target: edge.target,
             value: 1
         }));
+
+        // Add random edges until a given density is reached
+        let currentDensity = 0;
+        while (currentDensity < targetDensity) {
+            const source = nodes[Math.floor(Math.random() * count)].id;
+            const target = nodes[Math.floor(Math.random() * count)].id;
+            if (source !== target) {
+                links.push({ source, target, value: 1 });
+                currentDensity = links.length / (count * (count - 1) / 2);
+            }
+        }
+        
 
         // Initialize PSS views based on MST
         mstEdges.forEach(edge => {
@@ -58,8 +71,51 @@
     let { nodes, links, pssNodes } = generateGraph(nodeCount);
     let graphData = { nodes, links };
 
+    // Add this function to handle density changes
+    function adjustGraphDensity() {
+        const n = nodes.length;
+        const maxPossibleEdges = (n * (n - 1)) / 2;
+        const targetEdges = Math.floor(maxPossibleEdges * targetDensity);
+        
+        // Create a set of existing edges for quick lookup
+        const edgeSet = new Set(links.map(link => 
+            [link.source, link.target].sort().join('-')
+        ));
+
+        // Add or remove edges to reach target density
+        if (links.length < targetEdges) {
+            // Add edges
+            while (links.length < targetEdges) {
+                const source = nodes[Math.floor(Math.random() * n)].id;
+                const target = nodes[Math.floor(Math.random() * n)].id;
+                const edgeId = [source, target].sort().join('-');
+                
+                if (source !== target && !edgeSet.has(edgeId)) {
+                    links.push({ source, target, value: 1 });
+                    edgeSet.add(edgeId);
+                }
+            }
+        } else if (links.length > targetEdges) {
+            // Remove non-MST edges until we reach target
+            const mstEdges = new Set(PeerSamplingService.generateMST(nodes.map(n => n.id))
+                .map(edge => [edge.source, edge.target].sort().join('-')));
+                
+            links = links.filter(link => {
+                const edgeId = [link.source, link.target].sort().join('-');
+                return mstEdges.has(edgeId) || links.length <= targetEdges;
+            });
+        }
+
+        graphData = { nodes, links };
+    }
+
     // Update graph when parameters change
-    $: {
+    $: if (targetDensity) {
+        adjustGraphDensity();
+    }
+
+    // Keep the full graph regeneration for other parameters
+    $: if (nodeCount || selectedNodeId) {
         const newGraph = generateGraph(nodeCount);
         nodes = newGraph.nodes;
         links = newGraph.links;
@@ -165,6 +221,17 @@
                 min="0.001" 
                 max="0.1" 
                 step="0.001"
+            />
+        </div>
+        <div class="slider-container">
+            <label for="targetDensity">Target Density: {targetDensity.toFixed(3)}</label>
+            <input 
+                type="range" 
+                id="targetDensity" 
+                bind:value={targetDensity} 
+                min="0.05" 
+                max="1" 
+                step="0.05"
             />
         </div>
         <div class="selected-node">

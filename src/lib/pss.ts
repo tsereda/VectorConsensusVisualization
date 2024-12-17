@@ -41,15 +41,21 @@ export class PeerSamplingService {
             peer.age += 1;
         }
 
-        // Merge views
+        // Merge views more aggressively
         const combinedPeers = new Map([...this.view.peers]);
         for (const [id, peer] of otherView.peers) {
             if (!combinedPeers.has(id)) {
                 combinedPeers.set(id, {...peer});
+            } else {
+                // Keep the younger version of the peer
+                const existingPeer = combinedPeers.get(id)!;
+                if (peer.age < existingPeer.age) {
+                    combinedPeers.set(id, {...peer});
+                }
             }
         }
 
-        // Keep youngest peers
+        // Keep more peers, up to maxSize
         const sortedPeers = Array.from(combinedPeers.values())
             .sort((a, b) => a.age - b.age)
             .slice(0, this.maxSize);
