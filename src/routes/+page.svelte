@@ -1,6 +1,7 @@
 <script lang="ts">
     import ForceGraph from '$lib/components/ForceGraph.svelte';
     import { PeerSamplingService, type PeerNode } from '$lib/pss';
+    import PropagationGraph from '$lib/components/PropagationGraph.svelte';
     import { writable, type Writable } from 'svelte/store';
 
     let nodeCount = 10;
@@ -115,16 +116,21 @@
         isRunning = false;
     }
 
-    function handleInformedStatesChange(event) {
+    function handleInformedStatesChange(event: CustomEvent<{informedStates: Map<string, boolean>}>) {
         const { informedStates } = event.detail;
         nodes.forEach(node => {
             node.informed = informedStates.get(node.id) ?? node.informed;
         });
     }
 
-    // $: if (!isRunning) {
-    //     initializeGraph();
-    // }
+    // Update propagation metric
+    function updatePropagationMetric() {
+        propagationMetric.update(metric => {
+            const informedCount = nodes.filter(node => node.informed).length;
+            metric.push(informedCount / nodes.length);
+            return metric;
+        });
+    }
 </script>
 
 <div class="container">
@@ -186,7 +192,6 @@
             data={graphData}
             {numExchanges}
             {mixRatio}
-            {selectedNodeId}
             {isRunning}
             on:nodeSelect={handleNodeSelect}
             on:informedStatesChange={handleInformedStatesChange}
@@ -195,11 +200,22 @@
 
     <div class="metrics">
         <h3>Propagation Metric</h3>
-        <ul>
-            {#each $propagationMetric as metric, index}
-                <li>Time {index + 1}s: {metric.toFixed(2)}%</li>
-            {/each}
-        </ul>
+        <div class="metrics-content">
+            <div class="graph-section">
+                <PropagationGraph 
+                    data={$propagationMetric}
+                    width={400}
+                    height={150} 
+                />
+            </div>
+            <div class="log-section">
+                <ul>
+                    {#each $propagationMetric as metric, index}
+                        <li>Time {index + 1}s: {metric.toFixed(2)}%</li>
+                    {/each}
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -230,15 +246,6 @@
         min-width: 200px;
     }
 
-    .selected-node {
-        display: flex;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        background: #fff;
-        border-radius: 4px;
-        font-weight: bold;
-    }
-
     .graph-container {
         flex: 1;
         background: #fff;
@@ -254,6 +261,28 @@
         height: 150px;
         max-height: 150px; /* Set a fixed maximum height */
         overflow-y: auto;  /* Enable vertical scrolling */
+    }
+
+    .metrics-content {
+        display: flex;
+        gap: 1rem;
+        height: calc(100% - 2rem); /* Account for header */
+    }
+
+    .graph-section {
+        flex: 1;
+        min-width: 400px;
+    }
+
+    .log-section {
+        flex: 0 0 200px;
+        overflow-y: auto;
+        padding-right: 1rem;
+    }
+
+    .log-section ul {
+        margin: 0;
+        padding-left: 1.5rem;
     }
 
     input[type="range"] {
