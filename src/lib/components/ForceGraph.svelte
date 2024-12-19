@@ -1,68 +1,62 @@
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-  import { writable } from 'svelte/store';
   import * as d3 from 'd3';
+  import { config, graphData, informedStates } from '$lib/stores';
+  import { updateInformedStates } from '$lib/simulation';
+  import type { Node, Link, GraphData } from '$lib/types';
 
-  // Define types for our data
-  interface Node {
-    id: string;
-    informed: boolean;
-    x?: number;
-    y?: number;
-    fx?: number | null;
-    fy?: number | null;
-  }
-
-  interface Link {
-    source: string | Node;
-    target: string | Node;
-    value: number;
-  }
-
-  interface GraphData {
-    nodes: Node[];
-    links: Link[];
-  }
-
-  export let isRunning: boolean = false;
+  // Props
   export let data: GraphData;
   export let numExchanges = 3;
   export let mixRatio = 0.3;
 
+  // Component state
   let svgElement: SVGSVGElement;
-  let simulation: d3.Simulation<Node, d3.SimulationLinkDatum<Node>>;
   let container: HTMLDivElement;
   let width = 928;
   let height = 680;
-
-  // Store for tracking informed state
-  const informedStates = writable<Map<string, boolean>>(new Map());
-  const dispatch = createEventDispatcher();
-  let animationFrame: number;
+  let simulation: d3.Simulation<Node, d3.SimulationLinkDatum<Node>>;
   let neighbors: Map<string, Node[]>;
+  let animationFrame: number;
+  
+  const dispatch = createEventDispatcher();
+  const browser = typeof window !== 'undefined';
 
-  // Hardcoded parameter to switch between protocols
-  const protocol = 'push'; // Change to 'push', 'pull', or 'pushpull'
+  // Reactive statements
+  $: if ($graphData) {
+    createGraph($graphData);
+  }
+
+  $: if ($config.isRunning) {
+    simulation?.alpha(0.3).restart();
+  }
 
   function createGraph(data: GraphData) {
-    // Clear existing graph
-    d3.select(svgElement).selectAll("*").remove();
+    if (!svgElement) return; // Add guard clause
+  
+    // Stop existing simulation
+    if (simulation) {
+      simulation.stop();
+    }
 
-    // Create copies of data 
+    // Validate data
+    if (!data?.nodes?.length) {
+      console.warn('Invalid graph data provided');
+      return;
+    }
+
+    d3.select(svgElement).selectAll("*").remove();
+    
     const links = data.links.map(d => ({ ...d }));
     const nodes = data.nodes.map(d => ({ ...d }));
-
-    // Create a map of node id to node
     const nodeById = new Map(nodes.map(node => [node.id, node]));
 
     // Build neighbors map
     neighbors = new Map<string, Node[]>();
     nodes.forEach(node => neighbors.set(node.id, []));
-
     links.forEach(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-
       neighbors.get(sourceId)!.push(nodeById.get(targetId)!);
       neighbors.get(targetId)!.push(nodeById.get(sourceId)!);
     });
@@ -98,6 +92,7 @@
     node.append("title")
       .text((d: Node) => d.id);
 
+    // Drag handlers
     function dragstarted(event: d3.D3DragEvent<SVGCircleElement, Node, Node>) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
@@ -134,120 +129,39 @@
 
     // Initialize informed states
     const currentStates = new Map();
-    data.nodes.forEach(node => {
+    nodes.forEach(node => {
       currentStates.set(node.id, node.informed);
     });
     informedStates.set(currentStates);
 
-    function animate() {
-      if (isRunning) {
-        if (protocol === 'push') {
-          updateInformedStatesPush();
-        } else if (protocol === 'pull') {
-          updateInformedStatesPull();
-        } else if (protocol === 'pushpull') {
-          updateInformedStatesPushPull();
-        }
-      }
-      animationFrame = requestAnimationFrame(animate);
+    if (browser) {
+      animate();
     }
-
-    animate();
   }
 
-  function updateInformedStatesPull() {
-    informedStates.update(currentStates => {
-      const newStates = new Map();
+  function animate() {
+    if (!browser) return;
 
-      // Update informed states based on neighbors
-      for (let i = 0; i < numExchanges; i++) {
-        data.nodes.forEach(node => {
-          const nodeInformed = currentStates.get(node.id) ?? node.informed;
-          const neighborIds = neighbors.get(node.id)?.map(n => n.id) ?? [];
-
-          if (neighborIds.length > 0) {
-            // Randomly select a neighbor
-            const randomNeighborId = neighborIds[Math.floor(Math.random() * neighborIds.length)];
-            const neighborInformed = currentStates.get(randomNeighborId) ?? false;
-
-            // Update informed state based on neighbor
-            const newInformed = nodeInformed || (Math.random() < mixRatio && neighborInformed);
-            newStates.set(node.id, newInformed);
-          } else {
-            newStates.set(node.id, nodeInformed);
-          }
-        });
-      }
-
-      // Dispatch event with updated informed states
-      dispatch('informedStatesChange', { informedStates: new Map(newStates) });
-
-      return newStates;
-    });
-  }
-
-  function updateInformedStatesPush() {
-    informedStates.update(currentStates => {
-      const newStates = new Map(currentStates);
-
-      // Update informed states based on neighbors
-      for (let i = 0; i < numExchanges; i++) {
-        data.nodes.forEach(node => {
-          const nodeInformed = currentStates.get(node.id) ?? node.informed;
-          if (nodeInformed) {
-            const neighborIds = neighbors.get(node.id)?.map(n => n.id) ?? [];
-
-            neighborIds.forEach(neighborId => {
-              const neighborInformed = currentStates.get(neighborId) ?? false;
-              if (!neighborInformed && Math.random() < mixRatio) {
-                newStates.set(neighborId, true);
-              }
-            });
-          }
-        });
-      }
-
-      // Dispatch event with updated informed states
-      dispatch('informedStatesChange', { informedStates: new Map(newStates) });
-
-      return newStates;
-    });
-  }
-
-  function updateInformedStatesPushPull() {
-    informedStates.update(currentStates => {
-      const newStates = new Map(currentStates);
-
-      // Update informed states based on neighbors
-      for (let i = 0; i < numExchanges; i++) {
-        data.nodes.forEach(node => {
-          const nodeInformed = currentStates.get(node.id) ?? node.informed;
-          const neighborIds = neighbors.get(node.id)?.map(n => n.id) ?? [];
-
-          if (neighborIds.length > 0) {
-            // Randomly select a neighbor
-            const randomNeighborId = neighborIds[Math.floor(Math.random() * neighborIds.length)];
-            const neighborInformed = currentStates.get(randomNeighborId) ?? false;
-
-            // Push: Inform the neighbor if this node is informed
-            if (nodeInformed && Math.random() < mixRatio) {
-              newStates.set(randomNeighborId, true);
-            }
-
-            // Pull: Update this node's informed state based on the neighbor
-            if (!nodeInformed && Math.random() < mixRatio && neighborInformed) {
-              newStates.set(node.id, true);
-            }
-          }
-        });
-      }
-
-      // Dispatch event with updated informed states
-      dispatch('informedStatesChange', { informedStates: new Map(newStates) });
-
-      return newStates;
-    });
-  }
+    if ($config.isRunning) {
+        // Update informed states
+        const newStates = updateInformedStates(
+            data.nodes,
+            neighbors,
+            $informedStates,
+            $config.protocol,
+            mixRatio,
+            numExchanges
+        );
+        
+        // Update the store with new states
+        informedStates.set(newStates);
+        
+        // Restart simulation with new alpha
+        simulation?.alpha(0.3).restart();
+    }
+    
+    animationFrame = window.requestAnimationFrame(animate);
+}
 
   onMount(() => {
     createGraph(data);
@@ -270,37 +184,27 @@
   });
 
   onDestroy(() => {
-    if (animationFrame) {
+    if (browser && animationFrame) {
       cancelAnimationFrame(animationFrame);
     }
     if (simulation) simulation.stop();
   });
 
-  // Update node colors when informed states change
   $: if (svgElement && $informedStates) {
     d3.select(svgElement)
       .selectAll("circle")
-      .attr("fill", function (d) {
+      .attr("fill", (d) => {
         const node = d as Node;
         const informed = $informedStates.get(node.id) ?? node.informed;
         return informed ? "#ff4444" : "#4444ff";
       });
 
-    // Dispatch event with updated informed states
     dispatch('informedStatesChange', { informedStates: new Map($informedStates) });
   }
 </script>
 
-<div
-  class="force-graph-container"
-  bind:this={container}
->
-  <svg
-    bind:this={svgElement}
-    {width}
-    {height}
-    style="width: 100%; height: 100%;"
-  />
+<div class="force-graph-container" bind:this={container}>
+  <svg bind:this={svgElement} {width} {height} style="width: 100%; height: 100%;" />
 </div>
 
 <style>
