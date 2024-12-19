@@ -7,7 +7,6 @@
 
   // Props
   export let data: GraphData;
-  export let numExchanges = 3;
   export let mixRatio = 0.3;
 
   // Component state
@@ -150,7 +149,7 @@
             $informedStates,
             $config.protocol,
             mixRatio,
-            numExchanges
+            $config.numExchanges
         );
         
         // Update the store with new states

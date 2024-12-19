@@ -27,7 +27,6 @@ export interface SimulationConfig {
     density: number;
     protocol: 'push' | 'pull' | 'pushpull';
     isRunning: boolean;
-    selectedNodeId: string | null;
 }
 
 export interface Edge {

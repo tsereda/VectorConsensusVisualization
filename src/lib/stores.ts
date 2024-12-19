@@ -7,8 +7,7 @@ export const config = writable<SimulationConfig>({
     mixRatio: 0.3,
     density: 0,
     protocol: 'push',
-    isRunning: false,
-    selectedNodeId: null
+    isRunning: false
 });
 
 export const graphData = writable<GraphData>({ nodes: [], links: [] });

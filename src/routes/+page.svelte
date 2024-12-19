@@ -19,11 +19,6 @@ function startSimulation() {
     config.update(c => ({ ...c, isRunning: false }));
   }
 
-  function handleNodeSelect(event: CustomEvent<string>) {
-    config.update(c => ({ ...c, selectedNodeId: event.detail }));
-    initializeGraph();
-  }
-
   function handleInformedStatesChange(event: CustomEvent) {
     propagationMetric.update(metrics => {
       const percentage = event.detail.informedStates ? 
@@ -79,10 +74,7 @@ function startSimulation() {
     <div class="graph-container">
         <ForceGraph 
             data={$graphData}
-            numExchanges={$config.numExchanges}
             mixRatio={$config.mixRatio}
-            isRunning={$config.isRunning}
-            on:nodeSelect={handleNodeSelect}
             on:informedStatesChange={handleInformedStatesChange}
         />
     </div>
