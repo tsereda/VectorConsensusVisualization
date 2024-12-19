@@ -5,6 +5,8 @@
   import { generateInitialGraph } from '$lib/simulation';
   import { onMount } from 'svelte';
 
+  let logSection: HTMLDivElement;
+
   onMount(() => {
     initializeGraph();
   });
@@ -38,6 +40,10 @@ function startSimulation() {
         return [...metrics, percentage];
     });
 }
+
+  $: if (logSection && $propagationMetric) {
+    logSection.scrollTop = logSection.scrollHeight;
+  }
 </script>
 
 <div class="container">
@@ -98,7 +104,7 @@ function startSimulation() {
                     height={200} 
                 />
             </div>
-            <div class="log-section">
+            <div class="log-section" bind:this={logSection}>
                 <ul>
                     {#each $propagationMetric as metric, index}
                         <li>Time {index + 1}s: {metric.toFixed(2)}%</li>
@@ -176,12 +182,23 @@ function startSimulation() {
         flex: 0 0 200px;
         overflow-y: auto;
         padding-right: 1rem;
+        max-height: 200px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        padding: 8px;
     }
 
     .log-section ul {
         list-style: none;
         margin: 0;
         padding-left: 1.5rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .log-section li {
+        padding: 2px 0;
     }
 
     input[type="range"] {
