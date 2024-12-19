@@ -49,7 +49,7 @@ function startSimulation() {
                 id="nodeCount" 
                 bind:value={$config.nodeCount} 
                 min="10" 
-                max="500" 
+                max="400" 
                 step="10"
                 on:change={initializeGraph}
             />

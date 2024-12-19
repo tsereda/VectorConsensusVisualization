@@ -12,8 +12,8 @@
   // Component state
   let svgElement: SVGSVGElement;
   let container: HTMLDivElement;
-  let width = 928;
-  let height = 680;
+  let width;
+  let height;
   let simulation: d3.Simulation<Node, d3.SimulationLinkDatum<Node>>;
   let neighbors: Map<string, Node[]>;
   let animationFrame: number;
@@ -67,9 +67,16 @@
 
     simulation = d3.forceSimulation<Node>(nodes)
       .force("link", d3.forceLink<Node, d3.SimulationLinkDatum<Node>>(links).id((d: Node) => d.id))
-      .force("charge", d3.forceManyBody().strength(-400))
-      .force("x", d3.forceX().strength(0.1))
-      .force("y", d3.forceY().strength(0.1));
+      .force("charge", d3.forceManyBody().strength(-100))
+      .force("x", d3.forceX().strength(0.3))
+      .force("y", d3.forceY().strength(0.3))
+      .force("bounds", () => {
+      nodes.forEach(node => {
+        node.x = Math.max(-width/2 + 10, Math.min(width/2 - 10, node.x ?? 0));
+        node.y = Math.max(-height/2 + 10, Math.min(height/2 - 10, node.y ?? 0));
+      });
+    });
+
 
     const link = svg.append("g")
       .attr("stroke", "#999")
