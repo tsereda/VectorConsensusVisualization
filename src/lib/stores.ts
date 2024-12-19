@@ -10,6 +10,12 @@ export const config = writable<SimulationConfig>({
     isRunning: false
 });
 
+export const trials = writable<{
+    id: string;
+    metrics: number[];
+    config: SimulationConfig;
+}[]>([]);
+
 export const graphData = writable<GraphData>({ nodes: [], links: [] });
 export const informedStates = writable<Map<string, boolean>>(new Map());
 export const propagationMetric = writable<number[]>([]);

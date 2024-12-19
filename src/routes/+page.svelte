@@ -1,7 +1,7 @@
 <script lang="ts">
   import ForceGraph from '$lib/components/ForceGraph.svelte';
   import PropagationGraph from '$lib/components/PropagationGraph.svelte';
-  import { config, graphData, propagationMetric } from '$lib/stores';
+  import { config, graphData, propagationMetric, trials } from '$lib/stores';
   import { generateInitialGraph } from '$lib/simulation';
   import { onMount } from 'svelte';
 
@@ -18,8 +18,11 @@
 }
 
 function startSimulation() {
-    propagationMetric.set([]); // Reset metrics when starting new simulation
-    config.update(c => ({ ...c, isRunning: true }));
+    if ($trials.length === 0) {
+        startNewTrial();
+    } else {
+        config.update(c => ({ ...c, isRunning: true }));
+    }
 }
 
   function stopSimulation() {
@@ -27,23 +30,46 @@ function startSimulation() {
   }
 
   function handleInformedStatesChange(event: CustomEvent) {
-    propagationMetric.update(metrics => {
-        const percentage = event.detail.informedStates ? 
-            Array.from(event.detail.informedStates.values()).filter(Boolean).length / 
-            event.detail.informedStates.size * 100 : 0;
-        
-        // Stop simulation if 100% propagation is reached
-        if (percentage >= 100) {
-            stopSimulation();
-        }
-        
-        return [...metrics, percentage];
+    if ($trials.length === 0) return;
+
+    const currentTrial = $trials[$trials.length - 1];
+    const percentage = event.detail.informedStates ? 
+        Array.from(event.detail.informedStates.values()).filter(Boolean).length / 
+        event.detail.informedStates.size * 100 : 0;
+    
+    trials.update(t => {
+        const updatedTrials = [...t];
+        const lastTrial = updatedTrials[updatedTrials.length - 1];
+        updatedTrials[updatedTrials.length - 1] = {
+            ...lastTrial,
+            metrics: [...lastTrial.metrics, percentage]
+        };
+        return updatedTrials;
     });
+
+    // Stop simulation if 100% propagation is reached
+    if (percentage >= 100) {
+        stopSimulation();
+    }
 }
 
-  $: if (logSection && $propagationMetric) {
-    logSection.scrollTop = logSection.scrollHeight;
-  }
+function startNewTrial() {
+    const trialId = crypto.randomUUID().slice(0,8);
+    trials.update(t => [...t, {
+        id: trialId,
+        metrics: [],
+        config: {...$config}
+    }]);
+    initializeGraph();  // Reset graph for new trial
+    startSimulation();
+}
+
+  $: if (logSection && $trials.length > 0) {
+    const currentTrial = $trials[$trials.length - 1];
+    if (currentTrial.metrics.length > 0) {
+        logSection.scrollTop = logSection.scrollHeight;
+    }
+}
 </script>
 
 <div class="container">
@@ -86,6 +112,7 @@ function startSimulation() {
         </div>
         <button on:click={startSimulation} disabled={$config.isRunning}>Start</button>
         <button on:click={stopSimulation} disabled={!$config.isRunning}>Stop</button>
+        <button on:click={startNewTrial}>New Trial</button>
     </div>
 
     <div class="graph-container">
@@ -106,8 +133,11 @@ function startSimulation() {
             </div>
             <div class="log-section" bind:this={logSection}>
                 <ul>
-                    {#each $propagationMetric as metric, index}
-                        <li>Time {index + 1}s: {metric.toFixed(2)}%</li>
+                    {#each $trials as trial, trialIndex}
+                        <li class="trial-header">Trial {trialIndex + 1}</li>
+                        {#each trial.metrics as metric, index}
+                            <li>Time {index + 1}s: {metric.toFixed(2)}%</li>
+                        {/each}
                     {/each}
                 </ul>
             </div>
@@ -181,24 +211,21 @@ function startSimulation() {
     .log-section {
         flex: 0 0 200px;
         overflow-y: auto;
-        padding-right: 1rem;
-        max-height: 200px;
-        overflow-y: auto;
-        scrollbar-width: thin;
         padding: 8px;
+        background: white;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
     .log-section ul {
         list-style: none;
         margin: 0;
-        padding-left: 1.5rem;
-        margin: 0;
         padding: 0;
-        list-style: none;
     }
 
     .log-section li {
         padding: 2px 0;
+        font-size: 0.9em;
     }
 
     input[type="range"] {

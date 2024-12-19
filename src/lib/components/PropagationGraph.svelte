@@ -3,7 +3,7 @@
   import type { ScaleLinear } from 'd3-scale';
   import type { Selection } from 'd3-selection';
   import type { Line } from 'd3-shape';
-  import { propagationMetric } from '$lib/stores';
+  import { propagationMetric, trials } from '$lib/stores';
 
   export let width: number;
   export let height: number;
@@ -18,11 +18,15 @@
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
+  // Add color scale for different trials
+  const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
   $: {
-    if (svgElement && $propagationMetric) {
+    if (svgElement && $trials && $trials.length > 0) {
       // Create scales
+      const maxLength = Math.max(...$trials.map(t => t.metrics.length));
       xScale = d3.scaleLinear()
-        .domain([0, $propagationMetric.length - 1])
+        .domain([0, maxLength - 1])
         .range([0, innerWidth]);
 
       yScale = d3.scaleLinear()
@@ -34,7 +38,7 @@
         .x((_, i) => xScale(i))
         .y(d => yScale(d));
 
-      // Update SVG
+      // Clear previous content
       svg = d3.select(svgElement);
       svg.selectAll("*").remove();  // Clear previous content
 
@@ -51,11 +55,16 @@
         .attr("class", "y-axis")
         .call(d3.axisLeft(yScale));
 
-      // Draw line
-      g.append("path")
-        .datum($propagationMetric)
-        .attr("class", "line")
-        .attr("d", line);
+      // Draw lines for each trial
+      $trials.forEach((trial, index) => {
+        g.append("path")
+          .datum(trial.metrics)
+          .attr("class", "line")
+          .attr("d", line)
+          .attr("stroke", colorScale(trial.id))
+          .attr("fill", "none")
+          .attr("stroke-width", 2);
+      });
 
       // Add labels
       g.append("text")
@@ -71,6 +80,26 @@
         .attr("dy", "1em")
         .attr("text-anchor", "middle")
         .text("Informed Nodes (%)");
+
+      // Add legend
+      const legend = g.append("g")
+        .attr("class", "legend")
+        .attr("transform", `translate(${innerWidth - 120}, 10)`);
+
+      $trials.forEach((trial, i) => {
+        const legendRow = legend.append("g")
+          .attr("transform", `translate(0, ${i * 20})`);
+
+        legendRow.append("rect")
+          .attr("width", 15)
+          .attr("height", 15)
+          .attr("fill", colorScale(trial.id));
+
+        legendRow.append("text")
+          .attr("x", 20)
+          .attr("y", 12)
+          .text(`Trial ${i + 1}`);
+      });
     }
   }
 </script>
@@ -105,5 +134,9 @@
 
   :global(.x-axis line), :global(.y-axis line) {
     stroke: #999;
+  }
+
+  :global(.legend text) {
+    font-size: 12px;
   }
 </style>
