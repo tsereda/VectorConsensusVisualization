@@ -3,6 +3,11 @@
   import PropagationGraph from '$lib/components/PropagationGraph.svelte';
   import { config, graphData, propagationMetric } from '$lib/stores';
   import { generateInitialGraph } from '$lib/simulation';
+  import { onMount } from 'svelte';
+
+  onMount(() => {
+    initializeGraph();
+  });
   
   function initializeGraph() {
     propagationMetric.set([]); // Reset metrics
@@ -86,12 +91,11 @@ function startSimulation() {
     </div>
 
     <div class="metrics">
-        <h3>Propagation Metric</h3>
         <div class="metrics-content">
             <div class="graph-section">
                 <PropagationGraph 
-                    width={400}
-                    height={150} 
+                    width={500}
+                    height={250} 
                 />
             </div>
             <div class="log-section">
@@ -106,11 +110,21 @@ function startSimulation() {
 </div>
 
 <style>
+    :global(body) {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #f5f5f5;
+    }
+
+    :global(*) {
+        box-sizing: border-box;
+    }
     .container {
         display: flex;
         flex-direction: column;
         height: 100vh;
-        padding: 1rem;
+        padding: .5rem;
         box-sizing: border-box;
         gap: 1rem;
     }
@@ -145,7 +159,6 @@ function startSimulation() {
         border-radius: 4px;
         padding: 1rem;
         height: 300px;
-        overflow-y: auto;  /* Enable vertical scrolling */
     }
 
     .metrics-content {
