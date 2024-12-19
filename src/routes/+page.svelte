@@ -94,8 +94,8 @@ function startSimulation() {
         <div class="metrics-content">
             <div class="graph-section">
                 <PropagationGraph 
-                    width={500}
-                    height={250} 
+                    width={1400}
+                    height={200} 
                 />
             </div>
             <div class="log-section">
@@ -158,7 +158,7 @@ function startSimulation() {
         background: #f5f5f5;
         border-radius: 4px;
         padding: 1rem;
-        height: 300px;
+        height: 225px;
     }
 
     .metrics-content {
@@ -179,6 +179,7 @@ function startSimulation() {
     }
 
     .log-section ul {
+        list-style: none;
         margin: 0;
         padding-left: 1.5rem;
     }

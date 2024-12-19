@@ -110,7 +110,7 @@ export function updateInformedStates(
 export function generateInitialGraph(count: number, density: number): GraphData {
     const nodes = Array.from({ length: count }, (_, i) => ({
         id: String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i/26) : ''),
-        informed: i === Math.floor(Math.random() * count)
+        informed: i === 0  // Always set first node as informed
     }));
 
     // Get minimum spanning tree edges
