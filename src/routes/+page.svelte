@@ -21,12 +21,18 @@ function startSimulation() {
 
   function handleInformedStatesChange(event: CustomEvent) {
     propagationMetric.update(metrics => {
-      const percentage = event.detail.informedStates ? 
-        Array.from(event.detail.informedStates.values()).filter(Boolean).length / 
-        event.detail.informedStates.size * 100 : 0;
-      return [...metrics, percentage];
+        const percentage = event.detail.informedStates ? 
+            Array.from(event.detail.informedStates.values()).filter(Boolean).length / 
+            event.detail.informedStates.size * 100 : 0;
+        
+        // Stop simulation if 100% propagation is reached
+        if (percentage >= 100) {
+            stopSimulation();
+        }
+        
+        return [...metrics, percentage];
     });
-  }
+}
 </script>
 
 <div class="container">
