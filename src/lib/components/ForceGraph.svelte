@@ -12,8 +12,8 @@
   // Component state
   let svgElement: SVGSVGElement;
   let container: HTMLDivElement;
-  let width;
-  let height;
+  let width: number;
+  let height: number;
   let simulation: d3.Simulation<Node, d3.SimulationLinkDatum<Node>>;
   let neighbors: Map<string, Node[]>;
   let animationFrame: number;
