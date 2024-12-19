@@ -110,9 +110,44 @@ function startNewTrial() {
                 on:change={initializeGraph}
             />
         </div>
-        <button on:click={startSimulation} disabled={$config.isRunning}>Start</button>
-        <button on:click={stopSimulation} disabled={!$config.isRunning}>Stop</button>
-        <button on:click={startNewTrial}>New Trial</button>
+        <div class="control-group">
+            <label>Protocol:</label>
+            <div class="radio-group">
+                <label>
+                    <input 
+                        type="radio" 
+                        name="protocol" 
+                        value="push" 
+                        bind:group={$config.protocol}
+                        on:change={initializeGraph}
+                    />
+                    Push
+                </label>
+                <label>
+                    <input 
+                        type="radio" 
+                        name="protocol" 
+                        value="pull" 
+                        bind:group={$config.protocol}
+                        on:change={initializeGraph}
+                    />
+                    Pull
+                </label>
+                <label>
+                    <input 
+                        type="radio" 
+                        name="protocol" 
+                        value="pushpull" 
+                        bind:group={$config.protocol}
+                        on:change={initializeGraph}
+                    />
+                    Push-Pull
+                </label>
+            </div>
+        </div>
+        <!-- <button on:click={startSimulation} disabled={$config.isRunning}>Start</button>
+        <button on:click={stopSimulation} disabled={!$config.isRunning}>Stop</button> -->
+        <button on:click={startNewTrial}>Run Trial</button>
     </div>
 
     <div class="graph-container">
@@ -180,6 +215,23 @@ function startNewTrial() {
         flex-direction: column;
         gap: 0.5rem;
         min-width: 200px;
+    }
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .radio-group {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .radio-group label {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
     }
 
     .graph-container {
