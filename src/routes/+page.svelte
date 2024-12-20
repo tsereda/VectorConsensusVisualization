@@ -112,6 +112,17 @@ function startNewTrial() {
                 on:change={initializeGraph}
             />
         </div>
+        <div class="slider-container">
+            <label for="fanout">Fanout: {$config.numExchanges}</label>
+            <input 
+                type="range" 
+                id="fanout" 
+                bind:value={$config.numExchanges} 
+                min="1" 
+                max="10" 
+                step="1"
+            />
+        </div>
         <div class="control-group">
             <label>Protocol:</label>
             <div class="radio-group">
