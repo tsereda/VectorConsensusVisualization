@@ -124,7 +124,7 @@ function startNewTrial() {
                 id="density" 
                 bind:value={$config.density} 
                 min="0." 
-                max=".35" 
+                max="1" 
                 step="0.01"
                 on:change={initializeGraph}
             />
@@ -199,7 +199,7 @@ function startNewTrial() {
                     {#each $trials as trial, trialIndex}
                         <li class="trial-header">Trial {trialIndex + 1}</li>
                         {#each trial.metrics as metric, index}
-                            <li>Time {index + 1}s: {metric.toFixed(2)}%</li>
+                            <li>Epoch {index + 1}: {metric.toFixed(2)}%</li>
                         {/each}
                     {/each}
                 </ul>
