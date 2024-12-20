@@ -80,8 +80,8 @@ function startNewTrial() {
                 type="range" 
                 id="nodeCount" 
                 bind:value={$config.nodeCount} 
-                min="10" 
-                max="400" 
+                min="1" 
+                max="175" 
                 step="10"
                 on:change={initializeGraph}
             />
@@ -105,7 +105,7 @@ function startNewTrial() {
                 id="density" 
                 bind:value={$config.density} 
                 min="0." 
-                max="1" 
+                max=".35" 
                 step="0.01"
                 on:change={initializeGraph}
             />
