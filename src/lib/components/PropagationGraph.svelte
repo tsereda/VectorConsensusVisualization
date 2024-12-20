@@ -40,7 +40,7 @@
 
       // Clear previous content
       svg = d3.select(svgElement);
-      svg.selectAll("*").remove();  // Clear previous content
+      svg.selectAll("*").remove();
 
       const g = svg.append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
@@ -55,15 +55,35 @@
         .attr("class", "y-axis")
         .call(d3.axisLeft(yScale));
 
+      // Add legend
+      const legend = g.append("g")
+        .attr("class", "legend")
+        .attr("transform", `translate(${innerWidth - 120}, 10)`);
+
       // Draw lines for each trial
       $trials.forEach((trial, index) => {
+        const trialColor = colorScale(trial.id);
         g.append("path")
           .datum(trial.metrics)
           .attr("class", "line")
           .attr("d", line)
-          .attr("stroke", colorScale(trial.id))
+          .attr("stroke", trialColor)
           .attr("fill", "none")
           .attr("stroke-width", 2);
+
+        // Add legend entry
+        const legendRow = legend.append("g")
+          .attr("transform", `translate(0, ${index * 20})`);
+
+        legendRow.append("rect")
+          .attr("width", 15)
+          .attr("height", 15)
+          .attr("fill", trialColor);
+
+        legendRow.append("text")
+          .attr("x", 20)
+          .attr("y", 12)
+          .text(`Trial ${index + 1}`);
       });
 
       // Add labels
@@ -80,26 +100,6 @@
         .attr("dy", "1em")
         .attr("text-anchor", "middle")
         .text("Informed Nodes (%)");
-
-      // Add legend
-      const legend = g.append("g")
-        .attr("class", "legend")
-        .attr("transform", `translate(${innerWidth - 120}, 10)`);
-
-      $trials.forEach((trial, i) => {
-        const legendRow = legend.append("g")
-          .attr("transform", `translate(0, ${i * 20})`);
-
-        legendRow.append("rect")
-          .attr("width", 15)
-          .attr("height", 15)
-          .attr("fill", colorScale(trial.id));
-
-        legendRow.append("text")
-          .attr("x", 20)
-          .attr("y", 12)
-          .text(`Trial ${i + 1}`);
-      });
     }
   }
 </script>
@@ -120,7 +120,6 @@
   
   :global(.line) {
     fill: none;
-    stroke: #2196F3;
     stroke-width: 2;
   }
 
