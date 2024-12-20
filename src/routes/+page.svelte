@@ -10,16 +10,6 @@
   onMount(() => {
     initializeGraph();
   });
-  
-  function handleProtocolChange() {
-    // Only reset if the protocol has changed
-    if ($config.protocol !== previousProtocol) {
-      trials.set([]); // Reset trials
-      propagationMetric.set([]); // Reset propagation metrics
-      initializeGraph(); // Re-initialize the graph
-      previousProtocol = $config.protocol;
-    }
-  }
 
   function initializeGraph() {
     const newGraph = generateInitialGraph($config.nodeCount, $config.density);
@@ -49,7 +39,7 @@ function startSimulation() {
     trials.update(t => {
         const updatedTrials = [...t];
         const lastTrial = updatedTrials[updatedTrials.length - 1];
-        if (percentage < 100) {
+        if (percentage <= 100) {
             updatedTrials[updatedTrials.length - 1] = {
                 ...lastTrial,
                 metrics: [...lastTrial.metrics, percentage]
@@ -131,7 +121,6 @@ function startNewTrial() {
                         name="protocol" 
                         value="push" 
                         bind:group={$config.protocol}
-                        on:change={handleProtocolChange}
                     />
                     Push
                 </label>
@@ -141,7 +130,6 @@ function startNewTrial() {
                         name="protocol" 
                         value="pull" 
                         bind:group={$config.protocol}
-                        on:change={handleProtocolChange}
                     />
                     Pull
                 </label>
@@ -151,7 +139,6 @@ function startNewTrial() {
                         name="protocol" 
                         value="pushpull" 
                         bind:group={$config.protocol}
-                        on:change={handleProtocolChange}
                     />
                     Push-Pull
                 </label>
@@ -264,7 +251,7 @@ function startNewTrial() {
     .metrics-content {
         display: flex;
         gap: 1rem;
-        height: calc(100% - 2rem); /* Account for header */
+        height: 100%; /* Account for header */
     }
 
     .graph-section {
