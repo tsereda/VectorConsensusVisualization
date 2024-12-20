@@ -11,11 +11,20 @@
     initializeGraph();
   });
   
+  function handleProtocolChange() {
+    // Only reset if the protocol has changed
+    if ($config.protocol !== previousProtocol) {
+      trials.set([]); // Reset trials
+      propagationMetric.set([]); // Reset propagation metrics
+      initializeGraph(); // Re-initialize the graph
+      previousProtocol = $config.protocol;
+    }
+  }
+
   function initializeGraph() {
-    propagationMetric.set([]); // Reset metrics
     const newGraph = generateInitialGraph($config.nodeCount, $config.density);
     graphData.set(newGraph);
-}
+  }
 
 function startSimulation() {
     if ($trials.length === 0) {
@@ -40,10 +49,12 @@ function startSimulation() {
     trials.update(t => {
         const updatedTrials = [...t];
         const lastTrial = updatedTrials[updatedTrials.length - 1];
-        updatedTrials[updatedTrials.length - 1] = {
-            ...lastTrial,
-            metrics: [...lastTrial.metrics, percentage]
-        };
+        if (percentage < 100) {
+            updatedTrials[updatedTrials.length - 1] = {
+                ...lastTrial,
+                metrics: [...lastTrial.metrics, percentage]
+            };
+        }
         return updatedTrials;
     });
 
@@ -70,6 +81,7 @@ function startNewTrial() {
         logSection.scrollTop = logSection.scrollHeight;
     }
 }
+
 </script>
 
 <div class="container">
@@ -119,7 +131,7 @@ function startNewTrial() {
                         name="protocol" 
                         value="push" 
                         bind:group={$config.protocol}
-                        on:change={initializeGraph}
+                        on:change={handleProtocolChange}
                     />
                     Push
                 </label>
@@ -129,7 +141,7 @@ function startNewTrial() {
                         name="protocol" 
                         value="pull" 
                         bind:group={$config.protocol}
-                        on:change={initializeGraph}
+                        on:change={handleProtocolChange}
                     />
                     Pull
                 </label>
@@ -139,7 +151,7 @@ function startNewTrial() {
                         name="protocol" 
                         value="pushpull" 
                         bind:group={$config.protocol}
-                        on:change={initializeGraph}
+                        on:change={handleProtocolChange}
                     />
                     Push-Pull
                 </label>
