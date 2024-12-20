@@ -55,14 +55,18 @@
         .attr("class", "y-axis")
         .call(d3.axisLeft(yScale));
 
-      // Add legend
+      // Add legend with more space to the right and configuration details
       const legend = g.append("g")
         .attr("class", "legend")
-        .attr("transform", `translate(${innerWidth - 120}, 10)`);
+        .attr("transform", `translate(${innerWidth - 200}, 10)`);  // Moved further right
 
       // Draw lines for each trial
       $trials.forEach((trial, index) => {
         const trialColor = colorScale(trial.id);
+        
+        // Format the legend text to include configuration
+        const legendText = `Trial ${index + 1} (${trial.config.protocol}, n=${trial.config.nodeCount}, d=${trial.config.density.toFixed(2)})`;
+        
         g.append("path")
           .datum(trial.metrics)
           .attr("class", "line")
@@ -83,7 +87,7 @@
         legendRow.append("text")
           .attr("x", 20)
           .attr("y", 12)
-          .text(`Trial ${index + 1}`);
+          .text(legendText);  // Use the formatted text
       });
 
       // Add labels
