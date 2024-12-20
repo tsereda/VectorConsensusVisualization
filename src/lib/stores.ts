@@ -3,7 +3,7 @@ import type { GraphData, SimulationConfig } from './types';
 
 export const config = writable<SimulationConfig>({
     nodeCount: 10,
-    numExchanges: 3,
+    numExchanges: 3, // Number of exchanges (fan-out) per node
     mixRatio: 0.3,
     density: 0,
     protocol: 'push',

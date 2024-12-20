@@ -1,14 +1,15 @@
 <script lang="ts">
   import ForceGraph from '$lib/components/ForceGraph.svelte';
   import PropagationGraph from '$lib/components/PropagationGraph.svelte';
-  import { config, graphData, propagationMetric, trials } from '$lib/stores';
-  import { generateInitialGraph } from '$lib/simulation';
+  import { config, graphData, propagationMetric, trials, informedStates } from '$lib/stores';
+  import { generateInitialGraph, gossipProtocol } from '$lib/simulation';
   import { onMount } from 'svelte';
 
   let logSection: HTMLDivElement;
 
   onMount(() => {
     initializeGraph();
+    initializeInformedStates();
   });
 
   function initializeGraph() {
@@ -16,13 +17,29 @@
     graphData.set(newGraph);
   }
 
-function startSimulation() {
+  function initializeInformedStates() {
+    // Set the initial informed node (e.g., the first node)
+    const initialStates = new Map<string, boolean>();
+    $graphData.nodes.forEach(node => {
+      initialStates.set(node.id, false);
+    });
+    // Mark the first node as informed
+    if ($graphData.nodes.length > 0) {
+      initialStates.set($graphData.nodes[0].id, true);
+    }
+    informedStates.set(initialStates);
+  }
+
+  function startSimulation() {
     if ($trials.length === 0) {
         startNewTrial();
     } else {
         config.update(c => ({ ...c, isRunning: true }));
     }
-}
+
+    // Start the gossip protocol
+    config.update(c => ({ ...c, isRunning: true }));
+  }
 
   function stopSimulation() {
     config.update(c => ({ ...c, isRunning: false }));
@@ -109,6 +126,18 @@ function startNewTrial() {
                 min="0." 
                 max=".35" 
                 step="0.01"
+                on:change={initializeGraph}
+            />
+        </div>
+        <div class="slider-container">
+            <label for="numExchanges">Fan-out: {$config.numExchanges}</label>
+            <input
+                type="range"
+                id="numExchanges"
+                bind:value={$config.numExchanges}
+                min="1"
+                max="10"
+                step="1"
                 on:change={initializeGraph}
             />
         </div>

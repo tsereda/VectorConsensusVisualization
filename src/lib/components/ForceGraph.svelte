@@ -2,7 +2,7 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
   import { config, graphData, informedStates } from '$lib/stores';
-  import { updateInformedStates } from '$lib/simulation';
+  import { updateInformedStates, gossipProtocol } from '$lib/simulation';
   import type { Node, Link, GraphData } from '$lib/types';
 
   // Props
@@ -149,25 +149,25 @@
     if (!browser) return;
 
     if ($config.isRunning) {
-        // Update informed states
-        const newStates = updateInformedStates(
-            data.nodes,
-            neighbors,
-            $informedStates,
-            $config.protocol,
-            mixRatio,
-            $config.numExchanges
+      // Update informed states using gossipProtocol
+      informedStates.update(states => {
+        const newStates = gossipProtocol(
+          data.nodes,
+          neighbors,
+          states,
+          $config.protocol,
+          mixRatio,
+          $config.numExchanges
         );
-        
-        // Update the store with new states
-        informedStates.set(newStates);
-        
-        // Restart simulation with new alpha
-        simulation?.alpha(0.3).restart();
+        return newStates;
+      });
+
+      // Restart simulation with new alpha
+      simulation?.alpha(0.3).restart();
     }
-    
+
     animationFrame = window.requestAnimationFrame(animate);
-}
+  }
 
   onMount(() => {
     createGraph(data);

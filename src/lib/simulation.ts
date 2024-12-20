@@ -144,3 +144,52 @@ export function generateInitialGraph(count: number, density: number): GraphData 
 
     return { nodes, links };
 }
+
+// Function to simulate the gossip protocol
+export function gossipProtocol(
+  nodes: Node[],
+  neighbors: Map<string, Node[]>,
+  informedStates: Map<string, boolean>,
+  protocol: string,
+  mixRatio: number,
+  numExchanges: number
+): Map<string, boolean> {
+  const newStates = new Map<string, boolean>(informedStates);
+
+  // Determine informed nodes
+  const informedNodes = nodes.filter(node => informedStates.get(node.id));
+
+  // For each informed node, perform gossip exchanges
+  informedNodes.forEach(node => {
+    // Select peers to exchange messages with
+    const peers = selectRandomNeighbors(node, neighbors, numExchanges);
+
+    peers.forEach(peer => {
+      const isPeerInformed = informedStates.get(peer.id) || false;
+
+      // Push protocol: informed node informs uninformed peers
+      if (protocol === 'push' || protocol === 'pushpull') {
+        if (!isPeerInformed) {
+          newStates.set(peer.id, true);
+        }
+      }
+
+      // Pull protocol: informed node pulls information from peers
+      if (protocol === 'pull' || protocol === 'pushpull') {
+        if (!isPeerInformed) {
+          // Peer pulls information from informed node
+          newStates.set(peer.id, true);
+        }
+      }
+    });
+  });
+
+  return newStates;
+}
+
+// Helper function to select random neighbors
+function selectRandomNeighbors(node: Node, neighbors: Map<string, Node[]>, num: number): Node[] {
+  const neighborNodes = neighbors.get(node.id) || [];
+  const shuffled = neighborNodes.sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, num);
+}
