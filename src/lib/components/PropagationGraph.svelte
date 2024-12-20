@@ -15,7 +15,7 @@
   let line: Line<number>;
 
   // Increase right margin significantly to make room for legend
-  const margin = { top: 20, right: 200, bottom: 30, left: 40 };
+  const margin = { top: 20, right: 250, bottom: 30, left: 40 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
@@ -65,8 +65,8 @@
       $trials.forEach((trial, index) => {
         const trialColor = colorScale(trial.id);
         
-        // Format the legend text to include configuration
-        const legendText = `Trial ${index + 1} (${trial.config.protocol}, n=${trial.config.nodeCount}, d=${trial.config.density.toFixed(2)})`;
+        // Format the legend text to include configuration and exchange rate
+        const legendText = `Trial ${index + 1} (${trial.config.protocol}, n=${trial.config.nodeCount}, d=${trial.config.density.toFixed(2)}, r=${trial.config.mixRatio.toFixed(3)})`;
         
         g.append("path")
           .datum(trial.metrics)
