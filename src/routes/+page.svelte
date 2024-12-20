@@ -185,7 +185,7 @@ function startNewTrial() {
         margin: 0;
         padding: 0;
         overflow: hidden;
-        background: #f5f5f5;
+        background: #2c3e50;
     }
 
     :global(*) {
@@ -206,7 +206,7 @@ function startNewTrial() {
         flex-wrap: wrap;
         gap: 1rem;
         padding: 1rem;
-        background: #f5f5f5;
+        background: #b7b7b7;
         border-radius: 4px;
     }
 
@@ -236,14 +236,14 @@ function startNewTrial() {
 
     .graph-container {
         flex: 1;
-        background: #fff;
+        background: #b7b7b7;
         border-radius: 4px;
         overflow: hidden;
     }
 
     .metrics {
         flex: 0 0 auto;
-        background: #f5f5f5;
+        background: #b7b7b7;
         border-radius: 4px;
         padding: 1rem;
         height: 225px;
@@ -261,12 +261,11 @@ function startNewTrial() {
     }
 
     .log-section {
-        flex: 0 0 200px;
+        flex: 0 0 300px;
         overflow-y: auto;
         padding: 8px;
-        background: white;
+        background: b7b7b7;
         border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
     .log-section ul {
