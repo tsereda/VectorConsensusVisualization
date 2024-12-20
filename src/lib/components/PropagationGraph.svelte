@@ -14,7 +14,8 @@
   let yScale: ScaleLinear<number, number>;
   let line: Line<number>;
 
-  const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+  // Increase right margin significantly to make room for legend
+  const margin = { top: 20, right: 200, bottom: 30, left: 40 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
@@ -55,10 +56,10 @@
         .attr("class", "y-axis")
         .call(d3.axisLeft(yScale));
 
-      // Add legend with more space to the right and configuration details
+      // Position legend outside the plot area
       const legend = g.append("g")
         .attr("class", "legend")
-        .attr("transform", `translate(${innerWidth - 200}, 10)`);  // Moved further right
+        .attr("transform", `translate(${innerWidth + 20}, 0)`);  // 20px padding from graph
 
       // Draw lines for each trial
       $trials.forEach((trial, index) => {
@@ -75,7 +76,7 @@
           .attr("fill", "none")
           .attr("stroke-width", 2);
 
-        // Add legend entry
+        // Add legend entry with word wrap if needed
         const legendRow = legend.append("g")
           .attr("transform", `translate(0, ${index * 20})`);
 
@@ -87,7 +88,7 @@
         legendRow.append("text")
           .attr("x", 20)
           .attr("y", 12)
-          .text(legendText);  // Use the formatted text
+          .text(legendText);
       });
 
       // Add labels
